@@ -1,1 +1,5 @@
-*.obj, *.lst, *.mp1, *.mp2, *.lnk
+# Build files.
+*.OBJ, *.LST, *.MP1, *.MP2, *.LNK
+
+# Zip files.
+*.zip
