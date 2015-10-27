@@ -1,1 +1,1 @@
-del *.obj, *.lnk, *.mp*, *~, *.lst, hw2test
+del *.obj, *.lnk, *.mp*, *~, *.lst, hw2test.exe

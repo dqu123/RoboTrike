@@ -4,6 +4,7 @@
 *.MP1
 *.MP2
 *.LNK
+*.EXE
 
 # Zip files.
 *.zip
