@@ -40,6 +40,7 @@ CODE 	SEGMENT PUBLIC 'CODE'
 		EXTRN	Hex2String:NEAR
 		EXTRN	Dec2String:NEAR
 
+		
 ; ClearDisplay
 ; 
 ; Description: 		Clears the display buffer.
@@ -73,11 +74,11 @@ ClearDisplay		PROC		NEAR
 				
 ClearDisplayInit:
 		PUSH	BX						; Save BX for caller.
-		MOV		BX, 2 * BUFFER_SIZE - 2 ; Start loop at BUFFER_SIZE - 1.           
+		MOV		BX, END_OF_BUFFER ; Start loop at BUFFER_SIZE - 1.           
 
 ClearDisplayLoop:
-		MOV		display_buffer[BX], 0	; Clear each digit in the
-		SUB		BX, 2					; display_buffer.
+		MOV		display_buffer[BX], BLANK_SEG_PATTERN ; Clear each digit in the
+		SUB		BX, BYTES_PER_DIGIT					  ; display_buffer.
 		JNS		ClearDisplayLoop		
         ;JS 	EndClearDisplay
 		
@@ -87,6 +88,7 @@ EndClearDisplay:
 		RET
 		
 ClearDisplay		ENDP
+
 
 ; InitDisplay
 ; 
@@ -143,6 +145,7 @@ InitDisplay		PROC		NEAR
 		
 InitDisplay		ENDP
 
+
 ; MultiplexDisplay
 ; 
 ; Description: 		Reads from the display_buffer and writes it to the display
@@ -176,7 +179,9 @@ InitDisplay		ENDP
 ; Data Structures:	display buffer (array of words).
 ;
 ; Known Bugs:		None.
-; Limitations:		Assumes display_buffer was initialized. 
+; Limitations:		Assumes display_buffer was initialized. In order to display,
+;					the Display procedure must first be called with the 
+;					desired string to display. 
 ;
 ; Registers Changed: flags.
 ; 
@@ -199,7 +204,7 @@ MultiplexDisplayInit:
 MultiplexDisplayOn:
 		XOR 	BX, BX							; Prepare to access the next
 		MOV		BL, digit						; digit in the display_buffer,
-		SHL		BL, 1							; by converting to bytes and 
+		SHL		BL, DIGIT_SHIFT					; by converting to bytes and 
 		ADD		BL, scroll_index				; scrolling as necessary.
       	
 		MOV		AX, WORD PTR display_buffer[BX]	; The top byte contains the extra 
@@ -232,7 +237,7 @@ MultiplexDisplayOn:
 		
 MultiplexDisplayOff:
 		MOV		DX, LEDDisplay + SEG14_OFFSET	; Clear the SEG14_OFFSET port,
-		MOV		AL, 0							; which contains the extra 7
+		MOV		AL, BLANK_SEG_PATTERN		; which contains the extra 7
 		OUT		DX, AL							; segment pattern. This clears 
 												; the display.
 		;JMP 	UpdateBlinkDimCnt
@@ -256,6 +261,7 @@ EndMultiplexDisplay:
 		
 MultiplexDisplay			ENDP
 
+
 ; Display
 ; 
 ; Description: 		Clears display buffer and then writes the 14 segment bit pattern 
@@ -273,8 +279,9 @@ MultiplexDisplay			ENDP
 ; Arguments:		string (ES:SI) - null terminated ASCII string to display.
 ; Return Value:		None.
 ;
-; Local Variables:	index (BP) - used to access characters in the string.
+; Local Variables:	index (CX) - used to access characters in the string.
 ;					char  (BL) - tracks the current character read.
+;					byte_index (BX) - index in bytes of display_buffer. 
 ;					temp  (AX) - used for multiple dereferences.
 ; Shared Variables:	Writes to display_buffer - word array of segment patterns.
 ; Global Variables:	None.
@@ -316,13 +323,14 @@ CheckNull:
 		;JNE	GetSegPattern
 
 GetSegPattern:        
-        SHL     BL, 1							; Read the digit pattern from
-		MOV		AX, WORD PTR ASCIISegTable[BX]	; the ASCIISegTable.
-		;JMP	WriteSegPattern
+        SHL     BL, DIGIT_SHIFT					; Read the digit pattern from
+		MOV		AX, WORD PTR ASCIISegTable[BX]	; the ASCIISegTable, converting
+		;JMP	WriteSegPattern					; BL to bytes since ASCIISegTable
+												; is a word array.
 
 WriteSegPattern:
         MOV     BX, CX			; Write the segment bit pattern to the
-        SHL     BX, 1			; display_buffer for the current digit,
+        SHL     BX, DIGIT_SHIFT	; display_buffer for the current digit,
         MOV		[DI+BX], AX		; accounting for the size in bytes.
 		;JMP	CheckEndOfBuffer
 
@@ -370,7 +378,9 @@ Display			ENDP
 ;					display_buffer (array of words).
 ;
 ; Known Bugs:		None.
-; Limitations:		None.
+; Limitations:		Assumes timer interrupts and event handlers have been
+;					installed so the display_buffer will be loaded into the
+;					display IO ports by the MultiplexDisplay procedure.
 ;
 ; Registers Changed: flags.
 ; 
@@ -400,6 +410,7 @@ EndDisplayNum:
 		
 DisplayNum		ENDP
 
+
 ; DisplayHex
 ; 
 ; Description: 		Converts a 16-bit unsigned hexadecimal number to a zero-padded
@@ -428,7 +439,9 @@ DisplayNum		ENDP
 ;					display_buffer (array of words).
 ;
 ; Known Bugs:		None.
-; Limitations:		None.
+; Limitations:		Assumes timer interrupts and event handlers have been
+;					installed so the display_buffer will be loaded into the
+;					display IO ports by the MultiplexDisplay procedure.
 ;
 ; Registers Changed: flags.
 ; 

@@ -1,40 +1,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;                                                                            ;
-;                                  EHDEMO.INC                                ;
-;                              Event Handler Demo                            ;
+;                                  initEH.INC                                ;
+;                       Timer Event Handler Initialization                   ;
 ;                                 Include File                               ;
 ;                                                                            ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; This file contains the definitions for the Event Handler Demonstration
-; program (EHDEMO.ASM).
+; This file contains the definition for the initEH module.
 ;
 ; Revision History:
-;    11/11/92  Glen George      initial revision (originally part of
-;                                  ISRDEMO.ASM)
-;    10/27/93  Glen George      split definitions into own file (EHDEMO.INC)
-;                               updated/corrected comments
-;    10/24/94  Glen George      added Revision History section
-;                               updated comments
-;    10/25/95  Glen George      updated comments
-;    10/28/96  Glen George      added COUNTS_PER_MS and MS_PER_SEG constants
-;                               updated comments
-;    10/28/97  Glen George      added RESERVED_VECS constant
-;                               changed PACSVal and MPCSVal to not set
-;                                  reserved bits and set 3 wait states
-;                               updated comments
-;    12/26/99  Glen George      updated comments
-;     2/13/01  Glen George      changed MPCSVAL to a legal value
-;     2/03/03  Glen George      changed NO_DIGITS to NUM_DIGITS
-;                               changed Timer0EOI to TimerEOI
-;                               added NUM_IRQ_VECTORS
-;                               updated comments
-;     1/28/04  Glen George      updated comments
-;     2/05/05  Glen George      added FIRST_RESERVED_VEC and LAST_RESERVED_VEC
-;                                  and removed RESERVED_VECS for new version
-;                                  of ClrIRQVectors
-;                               updated comments
-;	 10/29/15  David Qu			fixed value of LEDDisplay
+;	 10/29/15  David Qu			initial revision
 ;	 10/30/15  David Qu			removed unused constants
 
 
