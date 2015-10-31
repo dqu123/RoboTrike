@@ -309,7 +309,6 @@ DisplayFunctionStart:
 		PUSHA						; Save caller registers.
 		
         XOR     CX, CX				; Start at first element in the array.
-        MOV     DI, OFFSET(display_buffer) ; Use DI to access display_buffer.
 		CALL	ClearDisplay		; Clear any bits set from previous calls to
 									; Display.
 		
@@ -329,9 +328,9 @@ GetSegPattern:
 												; is a word array.
 
 WriteSegPattern:
-        MOV     BX, CX			; Write the segment bit pattern to the
-        SHL     BX, DIGIT_SHIFT	; display_buffer for the current digit,
-        MOV		[DI+BX], AX		; accounting for the size in bytes.
+        MOV     BX, CX					; Write the segment bit pattern to the
+        SHL     BX, DIGIT_SHIFT			; display_buffer for the current digit,
+        MOV		display_buffer[BX], AX	; accounting for the size in bytes.
 		;JMP	CheckEndOfBuffer
 
 CheckEndOfBuffer:
