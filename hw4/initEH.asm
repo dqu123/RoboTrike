@@ -207,8 +207,8 @@ InitTimer       PROC    NEAR
         XOR     AX, AX
         OUT     DX, AL
 
-        MOV     DX, Tmr0MaxCntA ;setup max count for milliseconds per segment
-        MOV     AX, MS_PER_SEG  ;   count so can time the segments
+        MOV     DX, Tmr0MaxCntA     ;setup max count for milliseconds per segment
+        MOV     AX, MS_PER_DIGIT    ;count so can time the segments
         OUT     DX, AL
 
         MOV     DX, Tmr0Ctrl    ;setup the control register, interrupts on

@@ -86,7 +86,7 @@ MPCSval         EQU     00183H          ;PCS in I/O space, use PCS5/6, 3 wait st
 
 ; Timing Definitions
 COUNTS_PER_MS   EQU     2304	;number of timer counts per 1 ms (assumes 18.432 MHz clock)
-MS_PER_SEG      EQU     1       ;number of ms for each segment
+MS_PER_DIGIT    EQU     1       ;number of ms for each segment
 
 
 
