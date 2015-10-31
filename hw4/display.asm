@@ -258,14 +258,19 @@ UpdateBlinkDimCnt:
 CheckScrollCount:
 		INC 	scroll_cnt							; Update scroll_cnt MOD
 		AND		scroll_cnt, COUNTS_PER_SCROLL - 1	; COUNTS_PER_SCROLL, and
-		;JZ		UpdateScrollIndex					; update scroll index if
+		;JZ		CheckStringSize 					; update scroll index if
 		JNZ		EndMultiplexDisplay					; 0 MOD COUNTS_PER_SCROLL.
  
+CheckStringSize:
+		MOV		CL, string_size		; Check if we need to scroll (string_size > 
+		SUB		CL, NUM_DIGITS		; NUM_DIGITS).
+		JLE		EndMultiplexDisplay
+		;JG		UpdateScrollIndex
+		
 UpdateScrollIndex:
-		INC	 	scroll_index		; Update the scroll_index MOD string_size.
-		MOV		AL, scroll_index	; using the DIV instruction.		
-		MOV		CL, string_size
-		XOR		AX, AX			
+		INC	 	scroll_index		; Update the scroll_index MOD string_size
+		MOV		AL, scroll_index	; - NUM_DIGITS if string_size > NUM_DIGITS 		
+		XOR		AX, AX				; using the DIV instruction.
 		DIV 	CL
 		MOV		scroll_index, AH
 		;JMP   	EndMultiplexDisplay
