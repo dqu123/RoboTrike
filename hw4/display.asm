@@ -24,6 +24,7 @@
 ; 		10/29/15  David Qu		initial revision.
 ;		10/30/15  David Qu	    fixed display_buffer accesses.
 ;								added comments.
+;		10/31/15  David Qu		refactored code.
 
 ; local include files
 $INCLUDE(DISPLAY.INC)
@@ -68,7 +69,7 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/30/15
+; Last Modified: 10/31/15
 
 ClearDisplay		PROC		NEAR
 				
@@ -125,7 +126,7 @@ ClearDisplay		ENDP
 ; Registers Used:	flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/30/15
+; Last Modified: 10/31/15
 
 InitDisplay		PROC		NEAR
 				PUBLIC		InitDisplay
@@ -186,7 +187,7 @@ InitDisplay		ENDP
 ; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/30/15
+; Last Modified: 10/31/15
 
 MultiplexDisplay	PROC		NEAR
 					PUBLIC		MultiplexDisplay
@@ -300,7 +301,7 @@ MultiplexDisplay			ENDP
 ; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/30/15
+; Last Modified: 10/31/15
 
 Display			PROC		NEAR
 				PUBLIC		Display
@@ -384,7 +385,7 @@ Display			ENDP
 ; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/30/15
+; Last Modified: 10/31/15
 
 DisplayNum		PROC		NEAR
 				PUBLIC		DisplayNum
@@ -445,7 +446,7 @@ DisplayNum		ENDP
 ; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/30/15
+; Last Modified: 10/31/15
 
 DisplayHex		PROC		NEAR
 				PUBLIC		DisplayHex
