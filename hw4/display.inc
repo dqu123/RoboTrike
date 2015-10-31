@@ -24,11 +24,11 @@ BLANK_SEG_PATTERN	EQU		0	; Bit pattern for a blank digit.
 LEDDisplay      EQU     0000H   ; display port start address.
 SEG14_OFFSET	EQU		8		; Offset of byte that controls the last 7 segments
 								; of a 14 segment display.
-DEFAULT_ON_TIME		EQU		10	; Default on time per cycle in timer counts.
+DEFAULT_ON_TIME		EQU		128	; Default on time per cycle in timer counts.
 DEFAULT_OFF_TIME	EQU		0	; Default off time per cycle in timer counts.
 NUM_DIGITS			EQU		8   ; Number of digits in the display. Code assumes
 								; this is a power of 2 to simplify modular
 								; arithmetic.
-COUNTS_PER_SCROLL	EQU		128 ; Default number of timer counts before incrementing
-								; the scrool index. Code assumes this is a power
+COUNTS_PER_SCROLL	EQU		32  ; Default number of timer counts before incrementing
+								; the scroll index. Code assumes this is a power
 								; of 2 to simplify modular arithmetic.

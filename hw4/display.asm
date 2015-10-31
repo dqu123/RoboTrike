@@ -482,6 +482,7 @@ DATA    SEGMENT PUBLIC  'DATA'
 
 	digit			DB	?	; determines digit to write to/read from.
 	scroll_index	DB	?	; determines position in the display_buffer to read.
+	scroll_cnt		DW  ? 	; determines when to update the scroll_index.
 	blink_dim_cnt	DW 	?	; determines when/when not to display.
 	on_time			DW 	?	; timer counts to show display.
 	off_time		DW  ?	; timer counts to hide display.
