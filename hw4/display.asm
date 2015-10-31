@@ -11,16 +11,19 @@
 ; This file contains the functions for manipulating the display_buffer, a shared
 ; variable defined in this file that contains the segment pattern that should
 ; be multiplexed to the display. The public functions included are:
-;	InitDisplay	- initializes display shared variables
-; 	Display		- adds segment bit pattern of a string to the display_buffer
-;	DisplayNum	- adds segment bit pattern of a decimal num to the display_buffer
-;	DisplayHex	- adds segment bit pattern of a hex number to the display_buffer
+;	InitDisplay	- initializes display shared variables.
+;	MultiplexDisplay - reads from the display_buffer and writes to display.
+; 	Display		- adds segment bit pattern of a string to the display_buffer.
+;	DisplayNum	- adds segment bit pattern of a decimal num to the display_buffer.
+;	DisplayHex	- adds segment bit pattern of a hex number to the display_buffer.
 ;
 ; Local functions:
-;	ClearDisplay 	- sets all the bits in the display_buffer to 0.
+;	ClearDisplay - sets all the bits in the display_buffer to 0.
 ; 
 ; Revision History:
-; 		10/29/15  David Qu		initial revision
+; 		10/29/15  David Qu		initial revision.
+;		10/30/15  David Qu	    fixed display_buffer accesses.
+;								added comments.
 
 ; local include files
 $INCLUDE(DISPLAY.INC)
@@ -47,7 +50,7 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ;
 ; Local Variables:	None.
 ; Shared Variables:	Writes to display_buffer - shared word array of segment
-;									 bit patterns.
+;									 	       bit patterns.
 ; Global Variables:	None.
 ;
 ; Input:			None.
@@ -55,7 +58,7 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ;
 ; Error Handling:	None.
 ;
-; Algorithms:		Loops from BUFFER_SIZE to 0.
+; Algorithms:		Loops from the end of the display_buffer to the beginning.
 ; Data Structures:	display buffer (array of words).	
 ;
 ; Known Bugs:		None.
@@ -64,7 +67,7 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/29/15
+; Last Modified: 10/30/15
 
 ClearDisplay		PROC		NEAR
 				
@@ -73,7 +76,7 @@ ClearDisplayInit:
 		MOV		BX, 2 * BUFFER_SIZE - 2 ; Start loop at BUFFER_SIZE - 1.           
 
 ClearDisplayLoop:
-		MOV		display_buffer[BX], 0	; Write 0 to each word in the
+		MOV		display_buffer[BX], 0	; Clear each digit in the
 		SUB		BX, 2					; display_buffer.
 		JNS		ClearDisplayLoop		
         ;JS 	EndClearDisplay
@@ -87,12 +90,14 @@ ClearDisplay		ENDP
 
 ; InitDisplay
 ; 
-; Description: 		Initializes the display shared variables: digit, 
-;					scroll_index, and display_buffer. The string_buffer doesn't
-;					need to be initialized because it is always written to 
-;					before it is read by dec2string and hex2string.
-; Operation: 		Sets digit = 0, scroll_index = 0, and calls ClearDisplay to
-;					set all the bits in the display_buffer
+; Description: 		Initializes the display shared variables: digit, scroll_index, 
+;					blink_dim_cnt, on_time,. off_time and display_buffer. The 
+;					string_buffer doesn't need to be initialized because it is 
+;					always written to before it is read by dec2string and hex2string.
+;
+; Operation: 		Sets digit = 0, scroll_index = 0, blink_dim_cnt = 0, 
+;					on_time = DEFAULT_ON_TIME, off_time = DEFAULT_OFF_TIME and 
+;					calls ClearDisplay to clear all the bits in the display_buffer.
 ;
 ; Arguments:		None. 
 ; Return Value:		None.
@@ -123,12 +128,16 @@ ClearDisplay		ENDP
 InitDisplay		PROC		NEAR
 				PUBLIC		InitDisplay
 				
-		MOV		digit, 0     		; Initialize display shared variables.
-		MOV		scroll_index, 0
-		MOV		blink_dim_cnt, 0
-		MOV		on_time, DEFAULT_ON_TIME
-		MOV		off_time, DEFAULT_OFF_TIME
-        CALL 	ClearDisplay
+		MOV		digit, 0     		; digit, scroll_index, and blink_dim_cnt
+		MOV		scroll_index, 0		; are all counters of timer ticks that
+		MOV		blink_dim_cnt, 0	; should start at 0.
+		
+		MOV		on_time, DEFAULT_ON_TIME	; on_time, and off_time are numbers
+		MOV		off_time, DEFAULT_OFF_TIME	; of timer ticks to turn on and off
+											; the display per blink_dim cycle.
+		
+        CALL 	ClearDisplay				; The display_buffer should be 
+											; empty initially.
 		
 		RET
 		
@@ -139,8 +148,10 @@ InitDisplay		ENDP
 ; Description: 		Reads from the display_buffer and writes it to the display.
 ;					Writes one digit at a time, updating the shared variable 
 ;					digit each time it is called to track its progress.
+;					Multiplexes by updating a new digit each time it is called
+;					and also has a dynamically adjustable brightness setting.
 ;
-; Operation: 
+; Operation: 		First
 ;
 ; Arguments:		string (ES:SI) - null terminated ASCII string to display.
 ; Return Value:		None.
@@ -172,53 +183,65 @@ MultiplexDisplay	PROC		NEAR
         
 MultiplexDisplayInit:
 		PUSHA						; Save caller registers.
-		XOR 	BX, BX
 		
-		MOV		AX, on_time
-		CMP		blink_dim_cnt, AX 
+		MOV		AX, blink_dim_cnt	; blink_dim_cnt adjusts the display 
+		CMP		AX, on_time 		; brightness by turning the display on
+									; for on_time timer counts, and then off_time
+									; timer counts in a periodic manner.
 		;JL		MultiplexDisplayOn		
 		JGE		MultiplexDisplayOff
 		
 MultiplexDisplayOn:
-		MOV		BL, digit
-		SHL		BL, 1
-		ADD		BL, scroll_index
-        
-		MOV		DX, LEDDisplay + SEG14_OFFSET
-		MOV		AX, WORD PTR display_buffer[BX]
-        PUSH    AX
-        MOV     AL, AH
-      
-		OUT		DX, AL
+		XOR 	BX, BX							; Prepare to access the next
+		MOV		BL, digit						; digit in the display_buffer,
+		SHL		BL, 1							; by converting to bytes and 
+		ADD		BL, scroll_index				; scrolling as necessary.
+      	
+		MOV		AX, WORD PTR display_buffer[BX]	; The top byte contains the extra 
+												; 7 segments while the bottom 
+												; byte contains the regular 7.
+												
+        PUSH    AX   							; Save low byte because we
+												; to write the high byte first
+												; and since OUT can only read
+												; bytes from AL.
 		
-		MOV 	DX, LEDDisplay
-		ADD		DL, digit
-        POP     AX
-		OUT		DX, AL
+		MOV		DX, LEDDisplay + SEG14_OFFSET	; Write the high byte to the 
+        MOV     AL, AH							; SEG14_OFFSET position on the
+		OUT		DX, AL							; display. This clears the
+												; display, so we must do it 
+												; first.
 		
-
-		INC		digit
-		AND		digit, NUM_DIGITS - 1  
+		POP     AX								; Restore the low byte.
+		
+		MOV 	DX, LEDDisplay					; Write the low byte to the 
+		ADD		DL, digit						; specific digit output port.
+		OUT		DX, AL							; This displays the full 14 
+												; segment pattern.
+		
+		INC		digit							; Update the digit number,
+		AND		digit, NUM_DIGITS - 1  			; modulo NUM_DIGITS, using the
+												; AND 2^n - 1 trick.
 		
 		JMP 	UpdateBlinkDimCnt
 		
 MultiplexDisplayOff:
-		MOV		DX, LEDDisplay + SEG14_OFFSET
-		MOV		AL, 0
-		OUT		DX, AL
-		
+		MOV		DX, LEDDisplay + SEG14_OFFSET	; Clear the SEG14_OFFSET port,
+		MOV		AL, 0							; which contains the extra 7
+		OUT		DX, AL							; segment pattern. This clears 
+												; the display.
 		;JMP 	UpdateBlinkDimCnt
 		
 UpdateBlinkDimCnt:
-		INC	 	blink_dim_cnt
-		MOV		CX, on_time
-		ADD		CX, off_time
+		INC	 	blink_dim_cnt		; Update the blink_dim_cnt MOD (on_time +
+		MOV		CX, on_time			; off_time) using the DIV instruction.
+		ADD		CX, off_time		
 		XOR		DX, DX
 		DIV 	CX
 		MOV		blink_dim_cnt, DX
+		;JMP 	UpdateScrollIndex
 	
 UpdateScrollIndex:
-		
 		;JMP   	EndMultiplexDisplay
 		
 EndMultiplexDisplay:		
@@ -265,7 +288,7 @@ MultiplexDisplay			ENDP
 ; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/29/15
+; Last Modified: 10/30/15
 
 Display			PROC		NEAR
 				PUBLIC		Display
@@ -273,35 +296,33 @@ Display			PROC		NEAR
 DisplayFunctionStart:
 		PUSHA						; Save caller registers.
 		
-        XOR     CX, CX
-		XOR		BX, BX				; Clear high byte for accessing 256 entry
-									; ASCIISegTable.
+        XOR     CX, CX				; Start at first element in the array.
         MOV     DI, OFFSET(display_buffer) ;
 		CALL	ClearDisplay		; Clear any bits set from previous calls to
 									; Display.
 		
 DisplayLoop:
         MOV     BX, CX
-        MOV 	BL, BYTE PTR ES:[SI+BX]			; Keep track of each character
+        MOV 	BL, BYTE PTR ES:[SI+BX]	; Keep track of each character
         
 CheckNull:
 		CMP 	BL, ASCII_NULL		; Stop writing to buffer if NULL character is
-		JE 		EndDisplay			; read. Otherwise check if at end of buffer. 
+		JE 		EndDisplay			; read.
 		;JMP
 
 GetSegPattern:        
-        SHL     BL, 1
-		MOV		AX, WORD PTR ASCIISegTable[BX]	; read from the string to 
+        SHL     BL, 1							; Read the digit pattern from
+		MOV		AX, WORD PTR ASCIISegTable[BX]	; the ASCIISegTable.
 
 WriteSegPattern:
-        MOV     BX, CX
-        SHL     BX, 1
+        MOV     BX, CX		;
+        SHL     BX, 1		;
         MOV		[DI+BX], AX	; determine if NULL
 		INC 	CX
 
 CheckEndOfBuffer:					
-		CMP		CX, BUFFER_SIZE		; If at end of buffer, stop writing to it.
-		;JGE	EndDisplay			
+		CMP		CX, BUFFER_SIZE		; If at end of buffer, stop writing to it
+		;JGE	EndDisplay			; and truncate the displayed string.
 		JL		DisplayLoop
 		
 EndDisplay:
@@ -338,7 +359,7 @@ Display			ENDP
 ; Error Handling:	None.
 ;
 ; Algorithms:		None.
-; Data Structures:  string buffer (array of chars).
+; Data Structures:  string_buffer (array of chars).
 ;					display_buffer (array of words).
 ;
 ; Known Bugs:		None.
@@ -355,13 +376,15 @@ DisplayNum		PROC		NEAR
 DisplayNumInit:
 		PUSHA						; Save caller registers.
 		
-		MOV 	AX, DS
-		MOV		ES, AX
-		LEA		SI, string_buffer
-		
 DisplayNumBody:
-		CALL	Dec2String 
-		CALL	Display
+		LEA		SI, string_buffer	; Write the string version of n into
+		CALL	Dec2String 			; string_buffer using Dec2String, which
+									; takes in n from AX and writes to DS:SI.
+		
+		MOV 	AX, DS				; Add the segment pattern of the string
+		MOV		ES, AX				; in the string_buffer into the display_buffer
+		CALL	Display				; using Display, which reads from ES:SI
+									; and writes to the display_buffer.
 		
 EndDisplayNum:
 		POPA						; Restore caller registers.
@@ -411,13 +434,15 @@ DisplayHex		PROC		NEAR
 DisplayHexInit:
 		PUSHA						; Save caller registers.
 		
-		MOV		AX, DS
-		MOV		ES, AX
-		LEA		SI, string_buffer
-		
 DisplayHexBody:
-		CALL	Hex2String 
-		CALL	Display
+		LEA		SI, string_buffer	; Write the string version of n into
+		CALL	Hex2String 			; string_buffer using Hex2String, which
+									; takes in n from AX and writes to DS:SI.
+		
+		MOV 	AX, DS				; Add the segment pattern of the string
+		MOV		ES, AX				; in the string_buffer into the display_buffer
+		CALL	Display				; using Display, which reads from ES:SI
+									; and writes to the display_buffer.
 		
 EndDisplayHex:
 		POPA						; Restore caller registers.
@@ -429,16 +454,18 @@ DisplayHex		ENDP
 
 CODE	ENDS
 
+
+
 ; the data segment
 
 DATA    SEGMENT PUBLIC  'DATA'
-	digit			DB	?
-	scroll_index	DB	?
-	blink_dim_cnt	DW 	?
-	on_time			DW 	?
-	off_time		DW  ?
-	string_buffer	DB	(MAX_STRING_SIZE) DUP  (?)
-	display_buffer	DW	(BUFFER_SIZE)     DUP  (?)	
+	digit			DB	?	; determines digit to write to/read from.
+	scroll_index	DB	?	; determines position in the display_buffer to read.
+	blink_dim_cnt	DW 	?	; determines when/when not to display.
+	on_time			DW 	?	; timer counts to show display.
+	off_time		DW  ?	; timer counts to hide display.
+	string_buffer	DB	(MAX_STRING_SIZE) DUP  (?) ; 
+	display_buffer	DW	(BUFFER_SIZE)     DUP  (?) ;
 	
 
 DATA    ENDS		
