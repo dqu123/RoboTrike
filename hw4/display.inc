@@ -14,7 +14,7 @@
 ; Display constants
 MAX_STRING_SIZE EQU     7       ; Maximum number of bytes in a string
 								; written by dec2string / hex2string.
-BUFFER_SIZE		EQU     64      ; Maximum size of the display buffer. Must be
+BUFFER_SIZE		EQU     8      ; Maximum size of the display buffer. Must be
 								; a power of 2 to do MOD via AND BUFFER_SIZE - 1.
 LEDDisplay      EQU     0000H   ;display address
 SEG14_OFFSET	EQU		8		; Offset of byte that controls the last 7 segments

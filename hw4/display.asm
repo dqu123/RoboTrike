@@ -70,13 +70,13 @@ ClearDisplay		PROC		NEAR
 				
 ClearDisplayInit:
 		PUSH	BX						; Save BX for caller.
-		MOV		BX, BUFFER_SIZE - 1     ; Start loop at BUFFER_SIZE - 1.
+		MOV		BX, 2 * BUFFER_SIZE - 2 ; Start loop at BUFFER_SIZE - 1.           
 
 ClearDisplayLoop:
 		MOV		display_buffer[BX], 0	; Write 0 to each word in the
-		DEC		BX						; display_buffer.
-		JS		ClearDisplayLoop		
-        ;JNS 	EndClearDisplay
+		SUB		BX, 2					; display_buffer.
+		JNS		ClearDisplayLoop		
+        ;JS 	EndClearDisplay
 		
 EndClearDisplay:
 		POP		BX						; Restore BX for caller.
@@ -180,20 +180,23 @@ MultiplexDisplayInit:
 		JGE		MultiplexDisplayOff
 		
 MultiplexDisplayOn:
-		MOV 	DX, LEDDisplay
-		ADD		DL, digit
-		
 		MOV		BL, digit
 		SHL		BL, 1
 		ADD		BL, scroll_index
-		MOV 	AL, BYTE PTR display_buffer[BX]
-		OUT		DX, AL
-		
+        
 		MOV		DX, LEDDisplay + SEG14_OFFSET
-		INC		BL
-		MOV		AL, BYTE PTR display_buffer[BX]
+		MOV		AX, WORD PTR display_buffer[BX]
+        PUSH    AX
+        MOV     AL, AH
+      
 		OUT		DX, AL
 		
+		MOV 	DX, LEDDisplay
+		ADD		DL, digit
+        POP     AX
+		OUT		DX, AL
+		
+
 		INC		digit
 		AND		digit, NUM_DIGITS - 1  
 		
@@ -270,25 +273,34 @@ Display			PROC		NEAR
 DisplayFunctionStart:
 		PUSHA						; Save caller registers.
 		
-		XOR		BP, BP				; Start at the beginning of the string.
+        XOR     CX, CX
 		XOR		BX, BX				; Clear high byte for accessing 256 entry
 									; ASCIISegTable.
+        MOV     DI, OFFSET(display_buffer) ;
 		CALL	ClearDisplay		; Clear any bits set from previous calls to
 									; Display.
 		
 DisplayLoop:
-		MOV 	BL, BYTE PTR ES:[SI+BP]			; Keep track of each character
-		MOV		AX, WORD PTR ASCIISegTable[BX]	; read from the string to 
-		MOV		WORD PTR display_buffer[BP], AX	; determine if NULL
-		INC 	BP
-
+        MOV     BX, CX
+        MOV 	BL, BYTE PTR ES:[SI+BX]			; Keep track of each character
+        
 CheckNull:
 		CMP 	BL, ASCII_NULL		; Stop writing to buffer if NULL character is
 		JE 		EndDisplay			; read. Otherwise check if at end of buffer. 
-		;JNE	CheckEndOfBuffer
+		;JMP
+
+GetSegPattern:        
+        SHL     BL, 1
+		MOV		AX, WORD PTR ASCIISegTable[BX]	; read from the string to 
+
+WriteSegPattern:
+        MOV     BX, CX
+        SHL     BX, 1
+        MOV		[DI+BX], AX	; determine if NULL
+		INC 	CX
 
 CheckEndOfBuffer:					
-		CMP		BP, BUFFER_SIZE		; If at end of buffer, stop writing to it.
+		CMP		CX, BUFFER_SIZE		; If at end of buffer, stop writing to it.
 		;JGE	EndDisplay			
 		JL		DisplayLoop
 		
@@ -419,7 +431,7 @@ CODE	ENDS
 
 ; the data segment
 
-DATA    SEGMENT		  'DATA'
+DATA    SEGMENT PUBLIC  'DATA'
 	digit			DB	?
 	scroll_index	DB	?
 	blink_dim_cnt	DW 	?
