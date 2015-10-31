@@ -34,7 +34,8 @@
 ;                                  and removed RESERVED_VECS for new version
 ;                                  of ClrIRQVectors
 ;                               updated comments
-;	 10/29/15  David Qu			fixed value of LEDDisplay.
+;	 10/29/15  David Qu			fixed value of LEDDisplay
+;	 10/30/15  David Qu			removed unused constants
 
 
 
@@ -109,17 +110,12 @@ MPCSval         EQU     00183H          ;PCS in I/O space, use PCS5/6, 3 wait st
 
 
 ; Timing Definitions
-
-COUNTS_PER_MS   EQU     2304            ;number of timer counts per 1 ms (assumes 18.432 MHz clock)
-MS_PER_SEG      EQU     1             ;number of ms for each segment
+COUNTS_PER_MS   EQU     2304	;number of timer counts per 1 ms (assumes 18.432 MHz clock)
+MS_PER_SEG      EQU     1       ;number of ms for each segment
 
 
 
 ; General Definitions
-
 FIRST_RESERVED_VEC	EQU		1	;reserve vectors 1-3
 LAST_RESERVED_VEC	EQU		3
 NUM_IRQ_VECTORS     EQU     256 ;number of interrupt vectors
-
-
-NUM_DIGITS      EQU     8               ;number of digits in the display

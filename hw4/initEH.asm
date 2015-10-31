@@ -16,12 +16,13 @@
 ;
 ; The local functions included are:
 ;	Timer0EventHandler  - handles timer 0 events
-;	IllegalEventHandler	- 
+;	IllegalEventHandler	- gives a convenient breakpoint for debugging unexpected
+;					      interrupts.
 ;
 ; Revision History:
 ;
 ;    10/29/15  David Qu	 	     initial revision, added Glen's code.
-
+;	 10/30/15  David Qu			 updated ToC.
 
 
 ; local include files

@@ -123,7 +123,7 @@ ClearDisplay		ENDP
 ; Registers Used:	flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/29/15
+; Last Modified: 10/30/15
 
 InitDisplay		PROC		NEAR
 				PUBLIC		InitDisplay
@@ -145,13 +145,18 @@ InitDisplay		ENDP
 
 ; MultiplexDisplay
 ; 
-; Description: 		Reads from the display_buffer and writes it to the display.
-;					Writes one digit at a time, updating the shared variable 
-;					digit each time it is called to track its progress.
+; Description: 		Reads from the display_buffer and writes it to the display
+;					IO ports. Writes one digit at a time, updating the shared 
+;					variable digit each time it is called to track its progress.
 ;					Multiplexes by updating a new digit each time it is called
 ;					and also has a dynamically adjustable brightness setting.
+;					It appears to display all the LED digits at once.
 ;
-; Operation: 		First
+; Operation: 		First, save the registers. Then write to the two bytes in
+;					the display port corresponding to he 14-segment LED being
+;					processed if the blink_dim_cnt is in the on_time portion
+;					of its cycle. Otherwise, clear the display port. In both
+;					cases, increment the blink_dim_cnt MOD (on_time + off_time).
 ;
 ; Arguments:		string (ES:SI) - null terminated ASCII string to display.
 ; Return Value:		None.
@@ -171,12 +176,12 @@ InitDisplay		ENDP
 ; Data Structures:	display buffer (array of words).
 ;
 ; Known Bugs:		None.
-; Limitations:		None.
+; Limitations:		Assumes display_buffer was initialized. 
 ;
 ; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/29/15
+; Last Modified: 10/30/15
 
 MultiplexDisplay	PROC		NEAR
 					PUBLIC		MultiplexDisplay
@@ -297,7 +302,7 @@ DisplayFunctionStart:
 		PUSHA						; Save caller registers.
 		
         XOR     CX, CX				; Start at first element in the array.
-        MOV     DI, OFFSET(display_buffer) ;
+        MOV     DI, OFFSET(display_buffer) ; Use DI to access display_buffer.
 		CALL	ClearDisplay		; Clear any bits set from previous calls to
 									; Display.
 		
@@ -306,21 +311,23 @@ DisplayLoop:
         MOV 	BL, BYTE PTR ES:[SI+BX]	; Keep track of each character
         
 CheckNull:
-		CMP 	BL, ASCII_NULL		; Stop writing to buffer if NULL character is
-		JE 		EndDisplay			; read.
-		;JMP
+		CMP 	BL, ASCII_NULL		; Stop writing to buffer if a NULL character
+		JE 		EndDisplay			; is read.
+		;JNE	GetSegPattern
 
 GetSegPattern:        
         SHL     BL, 1							; Read the digit pattern from
 		MOV		AX, WORD PTR ASCIISegTable[BX]	; the ASCIISegTable.
+		;JMP	WriteSegPattern
 
 WriteSegPattern:
-        MOV     BX, CX		;
-        SHL     BX, 1		;
-        MOV		[DI+BX], AX	; determine if NULL
-		INC 	CX
+        MOV     BX, CX			; Write the segment bit pattern to the
+        SHL     BX, 1			; display_buffer for the current digit,
+        MOV		[DI+BX], AX		; accounting for the size in bytes.
+		;JMP	CheckEndOfBuffer
 
-CheckEndOfBuffer:					
+CheckEndOfBuffer:
+		INC 	CX					; Move to next character.				
 		CMP		CX, BUFFER_SIZE		; If at end of buffer, stop writing to it
 		;JGE	EndDisplay			; and truncate the displayed string.
 		JL		DisplayLoop
@@ -368,7 +375,7 @@ Display			ENDP
 ; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/29/15
+; Last Modified: 10/30/15
 
 DisplayNum		PROC		NEAR
 				PUBLIC		DisplayNum
@@ -426,7 +433,7 @@ DisplayNum		ENDP
 ; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/29/15
+; Last Modified: 10/30/15
 
 DisplayHex		PROC		NEAR
 				PUBLIC		DisplayHex
@@ -459,15 +466,17 @@ CODE	ENDS
 ; the data segment
 
 DATA    SEGMENT PUBLIC  'DATA'
+
 	digit			DB	?	; determines digit to write to/read from.
 	scroll_index	DB	?	; determines position in the display_buffer to read.
 	blink_dim_cnt	DW 	?	; determines when/when not to display.
 	on_time			DW 	?	; timer counts to show display.
 	off_time		DW  ?	; timer counts to hide display.
-	string_buffer	DB	(MAX_STRING_SIZE) DUP  (?) ; 
-	display_buffer	DW	(BUFFER_SIZE)     DUP  (?) ;
+	string_buffer	DB	(MAX_STRING_SIZE) DUP  (?) ; holds string versions of
+												   ; 16-bit numbers created by 
+												   ; hex2string and dec2string.
+	display_buffer	DW	(BUFFER_SIZE)     DUP  (?) ; contains digit segment patterns.
 	
-
 DATA    ENDS		
 		
 		
