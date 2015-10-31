@@ -148,15 +148,14 @@ InitCS  ENDP
 
 
 
-; InitTimer
+; InitTimer0
 ;
-; Description:       Initialize the 80188 Timers.  The timers are initialized
-;                    to generate interrupts every MS_PER_SEG milliseconds.
+; Description:       Initialize the 80188 Timer 0.  Timer 0 is initialized
+;                    to generate interrupts every millisecond.
 ;                    The interrupt controller is also initialized to allow the
-;                    timer interrupts.  Timer #2 is used to prescale the
-;                    internal clock from 2.304 MHz to 1 KHz.  Timer #0 then
-;                    counts MS_PER_SEG timer #2 intervals to generate the
-;                    interrupts.
+;                    timer interrupts.  Timer #0 then counts COUNTS_PER_MS 
+;                    clocks to generate the interrupts at 1 kHz, which is good
+;                    enough to multiplex an 8 digit display (8 * 30Hz = 240).
 ;
 ; Operation:         The appropriate values are written to the timer control
 ;                    registers in the PCB.  Also, the timer count registers
@@ -184,31 +183,18 @@ InitCS  ENDP
 ; Stack Depth:       0 words
 ;
 ; Author:            Glen George
-; Last Modified:     Oct. 29, 1997
+; Last Modified:     Oct. 31, 2015 (David Qu)
 
 InitTimer       PROC    NEAR
 				PUBLIC	InitTimer
 				
-                                ;initialize Timer #2 as a prescalar
-        MOV     DX, Tmr2Count   ;initialize the count register to 0
-        XOR     AX, AX
-        OUT     DX, AL
-
-        MOV     DX, Tmr2MaxCnt  ;setup max count for 1ms counts
-        MOV     AX, COUNTS_PER_MS
-        OUT     DX, AL
-
-        MOV     DX, Tmr2Ctrl    ;setup the control register, no interrupts
-        MOV     AX, Tmr2CtrlVal
-        OUT     DX, AL
-
-                                ;initialize Timer #0 for MS_PER_SEG ms interrupts
+                                ;initialize Timer #0 for 1 ms interrupts
         MOV     DX, Tmr0Count   ;initialize the count register to 0
         XOR     AX, AX
         OUT     DX, AL
 
-        MOV     DX, Tmr0MaxCntA ;setup max count for milliseconds per segment
-        MOV     AX, MS_PER_SEG  ;   count so can time the segments
+        MOV     DX, Tmr0MaxCntA     ;setup max count of timer clocks
+        MOV     AX, COUNTS_PER_MS   ;so can time digits
         OUT     DX, AL
 
         MOV     DX, Tmr0Ctrl    ;setup the control register, interrupts on
