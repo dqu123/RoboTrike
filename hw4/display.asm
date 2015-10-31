@@ -131,9 +131,11 @@ ClearDisplay		ENDP
 InitDisplay		PROC		NEAR
 				PUBLIC		InitDisplay
 				
-		MOV		digit, 0     		; digit, scroll_index, and blink_dim_cnt
-		MOV		scroll_index, 0		; are all counters of timer ticks that
+		MOV		digit, 0     		; digit, scroll_cnt, and blink_dim_cnt
+		MOV		scroll_cnt, 0		; are all counters of timer ticks that
 		MOV		blink_dim_cnt, 0	; should start at 0.
+		
+		MOV		scroll_index, 0		; current offset in buffer.
 		
 		MOV		on_time, DEFAULT_ON_TIME	; on_time, and off_time are numbers
 		MOV		off_time, DEFAULT_OFF_TIME	; of timer ticks to turn on and off
@@ -205,8 +207,8 @@ MultiplexDisplayInit:
 MultiplexDisplayOn:
 		XOR 	BX, BX							; Prepare to access the next
 		MOV		BL, digit						; digit in the display_buffer,
-		SHL		BL, DIGIT_SHIFT					; by converting to bytes and 
-		ADD		BL, scroll_index				; scrolling as necessary.
+		ADD		BL, scroll_index				; by converting to bytes and 
+		SHL		BL, DIGIT_SHIFT					; scrolling as necessary.
       	
 		MOV		AX, WORD PTR display_buffer[BX]	; The top byte contains the extra 
 												; 7 segments while the bottom 
@@ -245,14 +247,27 @@ MultiplexDisplayOff:
 		
 UpdateBlinkDimCnt:
 		INC	 	blink_dim_cnt		; Update the blink_dim_cnt MOD (on_time +
-		MOV		CX, on_time			; off_time) using the DIV instruction.
+		MOV		AX, blink_dim_cnt	; off_time) using the DIV instruction.
+		MOV		CX, on_time
 		ADD		CX, off_time		
 		XOR		DX, DX
 		DIV 	CX
 		MOV		blink_dim_cnt, DX
-		;JMP 	UpdateScrollIndex
-	
+		;JMP 	CheckScrollCount
+		
+CheckScrollCount:
+		INC 	scroll_cnt							; Update scroll_cnt MOD
+		AND		scroll_cnt, COUNTS_PER_SCROLL - 1	; COUNTS_PER_SCROLL, and
+		;JZ		UpdateScrollIndex					; update scroll index if
+		JNZ		EndMultiplexDisplay					; 0 MOD COUNTS_PER_SCROLL.
+ 
 UpdateScrollIndex:
+		INC	 	scroll_index		; Update the scroll_index MOD string_size.
+		MOV		AL, scroll_index	; using the DIV instruction.		
+		MOV		CL, string_size
+		XOR		AX, AX			
+		DIV 	CL
+		MOV		scroll_index, AH
 		;JMP   	EndMultiplexDisplay
 		
 EndMultiplexDisplay:		
@@ -341,6 +356,8 @@ CheckEndOfBuffer:
 		JL		DisplayLoop
 		
 EndDisplay:
+		MOV 	string_size, CL		; Update string_size.
+		
 		POPA						; Restore caller registers.
         
         RET
@@ -486,6 +503,7 @@ DATA    SEGMENT PUBLIC  'DATA'
 	blink_dim_cnt	DW 	?	; determines when/when not to display.
 	on_time			DW 	?	; timer counts to show display.
 	off_time		DW  ?	; timer counts to hide display.
+	string_size		DB  ? 	; size of string to display.
 	string_buffer	DB	(MAX_STRING_SIZE) DUP  (?) ; holds string versions of
 												   ; 16-bit numbers created by 
 												   ; hex2string and dec2string.

@@ -15,7 +15,7 @@
 ; Display constants
 MAX_STRING_SIZE EQU     7       ; Maximum number of bytes in a string
 								; written by dec2string / hex2string.
-BUFFER_SIZE		EQU     8       ; Maximum size of the display buffer in words. Must be
+BUFFER_SIZE		EQU     16      ; Maximum size of the display buffer in words. Must be
 								; a power of 2 to do MOD via AND BUFFER_SIZE - 1.
 END_OF_BUFFER	EQU		2 * BUFFER_SIZE - 2 ; End index of buffer in bytes.
 BYTES_PER_DIGIT		EQU		2	; Number of bytes per bit pattern of one display digit.
