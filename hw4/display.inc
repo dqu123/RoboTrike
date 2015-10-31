@@ -11,6 +11,7 @@
 ; Revision History:
 ;		10/29/15  David Qu 		initial revision
 ;		10/30/15  David Qu		updated comments.
+;		10/31/15  David Qu		added scrolling constants.
 
 ; Display constants
 MAX_STRING_SIZE EQU     7       ; Maximum number of bytes in a string
