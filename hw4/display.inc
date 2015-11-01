@@ -11,7 +11,7 @@
 ; Revision History:
 ;		10/29/15  David Qu 		initial revision
 ;		10/30/15  David Qu		updated comments.
-;		10/31/15  David Qu		added scrolling constants.
+;		10/31/15  David Qu		removed unused constants.
 
 ; Display constants
 MAX_STRING_SIZE EQU     7       ; Maximum number of bytes in a string
@@ -30,6 +30,3 @@ DEFAULT_OFF_TIME	EQU		0	; Default off time per cycle in timer counts.
 NUM_DIGITS			EQU		8   ; Number of digits in the display. Code assumes
 								; this is a power of 2 to simplify modular
 								; arithmetic.
-COUNTS_PER_SCROLL	EQU		32  ; Default number of timer counts before incrementing
-								; the scroll index. Code assumes this is a power
-								; of 2 to simplify modular arithmetic.
