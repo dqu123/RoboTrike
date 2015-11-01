@@ -105,11 +105,15 @@ DATA    ENDS
 ; Arguments:         None.
 ; Return Value:      None.
 ;
-; Local Variables:   None.
+; Local Variables:   key (AL) - what the key press was.
+;                    debounced (AH) - whether the key press has been debounced. 
 ; Shared Variables:  Writes to key - encoding of a key press/combination.
 ;                              debCntr - counter to detemine if the key press
 ;                                        should be debounced.
+;                              rptCntr - counter to determine if the repeat rate
+;                                        should increase.
 ;                              rptRate - rate to auto repeat a key when held.
+;                    (Writes by calling KeypadDebounce).
 ; Global Variables:  None.
 ;
 ; Input:             None.
@@ -123,11 +127,12 @@ DATA    ENDS
 ; Known Bugs:        None.
 ; Limitations:       Assumes keypad shared variables have been initialized.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, AX.
 ; Special notes:     None.
 ;
 ; Pseudo code:
-; if (KeypadDebounce(key))
+; key (AL), debounced (AH) = KeypadDebounce()
+; if (debounced)
 ;     EnqueueEvent(KEYPRESS_EVENT, key)  
 
 
@@ -210,7 +215,7 @@ DATA    ENDS
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, AL.
 ; Special notes:     None.
 ;
 ; Pseudo code:
@@ -246,9 +251,10 @@ DATA    ENDS
 ;                    rptCntr and update rptRate to FAST_RPT_RATE if rptCntr reaches 0.
 ;
 ; Arguments:         None.
-; Return Value:      debounced (AL) - whether the key has been debounced or not.
+; Return Value:      debounced (AH) - whether the key has been debounced or not.
+;                    key       (AL) - debounced key if it's been debounced.
 ;
-; Local Variables:   keypress (AX) - the current keypress when debouncing.
+; Local Variables:   keypress (AL) - the current keypress when debouncing.
 ; Shared Variables:  Reads/writes to key - encoding of a key press/combination.
 ;                    Writes to debCntr - counter to detemine if the key press
 ;                                        should be debounced.
@@ -270,7 +276,7 @@ DATA    ENDS
 ; Known Bugs:        None.
 ; Limitations:       Assumes keypad shared variables have been properly initialized.
 ;
-; Registers Changed: flags, AL.
+; Registers Changed: flags, AX.
 ; Special notes:     None.
 ;
 ; Pseudo code:
@@ -278,7 +284,7 @@ DATA    ENDS
 ; if (key == NO_KEY_VALUE)
 ;     ResetKeypad()
 ;     key = cur_key
-;     return FALSE
+;     return_byte key, FALSE
 ; else if (key == cur_key)
 ;     debCntr--
 ;     rptCntr--
@@ -286,7 +292,7 @@ DATA    ENDS
 ;         rptRate = FAST_RPT_RATE
 ;     if (debCntr == 0)
 ;         debCntr = rptRate
-;         return TRUE
+;         return_byte key, TRUE
 ; else 
 ;     ResetKeypad()
-;     return FALSE
+;     return_byte key, FALSE
