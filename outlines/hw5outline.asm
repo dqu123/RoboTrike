@@ -12,9 +12,10 @@
 ;
 ; Local functions:
 ; ResetKeypad    - reset shared variables (key, debCntr, rptCntr, rptRate)
-; ScanKeypad     - Return key or NO_KEY in AL, picks first row that has a valid 
-;                  key combination that includes at least one pressed key.
-; KeypadDebounce - updates and returns debounced value in AL (true or false).
+; ScanKeypad     - Return key or NO_KEY_VALUE in AL, picks first row that has a 
+;                  valid key combination that includes at least one pressed key.
+; KeypadDebounce - updates and returns debounced value in AL (true or false)
+;                  also checks if key is NO_KEY_VALUE.
 
 
 
@@ -35,6 +36,11 @@
 ; represent the key combination, which ranges from 0 to F, and has the same 
 ; encoding as the bottom four bits of the keypad's output ports. So, if both
 ; keys 6 and 7 are press this will be represented as 19H.
+; Note that this encoding prevents combinations of keys spanning multiple rows,
+; such as 1 and 5. The 2^16 possible combinations of key presses on a 16 digit 
+; keypad takes at least one word to fully encode, but is unnecessary because no 
+; one can remember 2^16 button combinations. The 4 * 2^4 = 64 button combinations
+; allowed by this scheme should be plenty. 
 
 ; Constants.
 
@@ -175,8 +181,8 @@ DATA    ENDS
 ;                    keypress of the first row with a valid keypress starting
 ;                    from KEYPAD_ADDRESS. The returned value encodes both the
 ;                    row and key comination pressed as specified in the file
-;                    description. Note this prevents button combinations across 
-;                    rows from registering. 
+;                    description. Note this encoding prevents button 
+;                    combinations across rows from registering. 
 ;   
 ; Operation:         Check each row in the keypad output port until a valid
 ;                    keypress is found, or the end of the keypad is reached.
