@@ -21,14 +21,16 @@
 
 ; Keypad Encoding:
 ; The keypad is a 4x4 grid that groups each row into a output byte value that 
-; ranges from 70 to 7F, depending on which combination of 4 buttons is pressed.
+; ranges from X0H to XFH, depending on the combination of 4 buttons pressed.
 ;
 ;  Decimal value        -1 -2 -4 -8   For example, if key #10 is pressed, then
-;  ================================   address 82H will contain 7DH because 15 - 2
+;  ================================   address 82H will contain XDH because 15 - 2
 ;  Row 0 (Address 80H):  1  2  3  4   = 13 = D in hex. If both keys 6 and 7 are
-;  Row 1 (Address 81H):  5  6  7  8   pressed, address 81H will contain 79H
+;  Row 1 (Address 81H):  5  6  7  8   pressed, address 81H will contain X9H
 ;  Row 2 (Address 82H):  9 10 11 12   since 15 - 2 - 4 = 9. Note that the top
-;  Row 3 (Address 83H): 13 14 15 16   four bits are always 7H.
+;  Row 3 (Address 83H): 13 14 15 16   four bits are always XH, where X is 
+;                                     dependent on the specific board, and
+;                                     can be any value.
 ; 
 ; For these procedures, key values are encoded as bytes that determine both
 ; the row in the keypad, and the button combination.
