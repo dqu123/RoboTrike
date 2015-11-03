@@ -32,7 +32,7 @@
 ; 
 ; For these procedures, key values are encoded as bytes that determine both
 ; the row in the keypad, and the button combination.
-; The top four bits repesent the row in the keypad while the bottom four bits
+; The top four bits represent the row in the keypad while the bottom four bits
 ; represent the key combination, which ranges from 0 to F, and has the same 
 ; encoding as the bottom four bits of the keypad's output ports. So, if both
 ; keys 6 and 7 are press this will be represented as 19H.
@@ -220,9 +220,9 @@ DATA    ENDS
 ;
 ; Pseudo code:
 ; for (unsigned byte i = 0; i < NUM_KEY_ROWS; i++)
-;     unsigned byte key = KEYPAD_ADDRESS[i]
+;     unsigned byte key = (KEYPAD_ADDRESS[i] & KEY_VALUE_MASK)
 ;     if (key != NO_KEY_VALUE)
-;         return_byte (i << KEY_ROW_SHIFT) | (key & KEY_VALUE_MASK)
+;         return_byte (i << KEY_ROW_SHIFT) | key
 ; return_byte NO_KEY_VALUE
 
 
