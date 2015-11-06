@@ -9,14 +9,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Description:      This program tests the keypad functions for Homework #5.  
-;                   First, it initializes the timer interrupts and keypad
-;					shared variables.
+;                   First, it initializes the chip select, timer interrupts,
+;                   and, display and keypad shared variables. Then it calls
+;                   the KeyTest function 
 ;
 ; Input:            Keypad.
-; Output:           None.
+; Output:           Display.
 ;
-; User Interface:   The user can set breakpoints at hw5test to test 
-;					different keypresses.
+; User Interface:   The user can press various key combinations, and any
+;                   resulting events will displayed on the LED display. 
 ;
 ; Error Handling:   None.
 ;
@@ -45,15 +46,15 @@ CODE    SEGMENT PUBLIC 'CODE'
 
 ; external function declarations
 
-		EXTRN	InitCS:NEAR			
-        EXTRN   ClrIRQVectors:NEAR          
-        EXTRN   InstallTimer0Handler:NEAR
-        EXTRN   InstallTimer1Handler:NEAR
-        EXTRN   InitTimer0:NEAR
-		EXTRN	InitTimer1:NEAR		
-		EXTRN 	InitKeypad:NEAR
-        EXTRN   InitDisplay:NEAR
-		EXTRN	KeyTest:NEAR
+		EXTRN	InitCS:NEAR			        ;Initialize Chip Select.
+        EXTRN   ClrIRQVectors:NEAR          ;Clear Interrupt Vector Table.
+        EXTRN   InstallTimer0Handler:NEAR   ;Install display multiplex on timer 0
+        EXTRN   InstallTimer1Handler:NEAR   ;Install key debouncing on timer 1
+        EXTRN   InitTimer0:NEAR             ;Initialize timer 0.
+		EXTRN	InitTimer1:NEAR		        ;Initialize timer 1.
+		EXTRN 	InitKeypad:NEAR             ;Initialize keypad shared variables.
+        EXTRN   InitDisplay:NEAR            ;Initialize display shared variables.
+		EXTRN	KeyTest:NEAR                ;Shows enqueued events in display.
 
 START:  
 
@@ -84,7 +85,7 @@ MAIN:
         CALL    InitTimer1              ;initialize the internal timer
         STI                             ;and finally allow interrupts.
 
-		CALL 	KeyTest				;run test routines.
+		CALL 	KeyTest				    ;run test routine.
  
 InfiniteLoop:
         JMP     InfiniteLoop   
