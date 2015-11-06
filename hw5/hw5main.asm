@@ -47,9 +47,12 @@ CODE    SEGMENT PUBLIC 'CODE'
 
 		EXTRN	InitCS:NEAR			
         EXTRN   ClrIRQVectors:NEAR          
-        EXTRN   InstallTimer1Handler:NEAR     
+        EXTRN   InstallTimer0Handler:NEAR
+        EXTRN   InstallTimer1Handler:NEAR
+        EXTRN   InitTimer0:NEAR
 		EXTRN	InitTimer1:NEAR		
 		EXTRN 	InitKeypad:NEAR
+        EXTRN   InitDisplay:NEAR
 		EXTRN	KeyTest:NEAR
 
 START:  
@@ -68,16 +71,23 @@ MAIN:
 
         CALL    ClrIRQVectors           ;clear (initialize) interrupt vector table
 
+        
+        CALL    InstallTimer0Handler
         CALL    InstallTimer1Handler    ;install the event handler
                                         ;   ALWAYS install handlers before
                                         ;   allowing the hardware to interrupt.
 
 		CALL 	InitKeypad				;initialize keypad shared variables.
+        CALL    InitDisplay             ;initialize display shared variables.
 		
+        CALL    InitTimer0             
         CALL    InitTimer1              ;initialize the internal timer
         STI                             ;and finally allow interrupts.
 
 		CALL 	KeyTest				;run test routines.
+ 
+InfiniteLoop:
+        JMP     InfiniteLoop   
 
         RET                             ;Exit program.
 

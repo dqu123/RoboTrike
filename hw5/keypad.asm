@@ -11,7 +11,7 @@
 ; Public functions:
 ; HandleKeypad   - scans for a key press, or debounces the current keypress.
 ;                  if a key is debounced, calls EnqueueEvent.
-; InitKeypad     - Initializes the keypad
+; InitKeypad     - initializes the keypad shared variables.
 ;
 ; Local functions:
 ; ResetKeypad    - reset shared variables (key, debCntr, rptCntr, rptRate)
@@ -182,7 +182,8 @@ HandleKeypad  ENDP
 ; Special notes:     None.
 
 InitKeypad     PROC        NEAR
-        
+               PUBLIC      InitKeypad
+               
         CALL    ResetKeypad     ; Reset key, debCntr, rptCntr, rptRate,
         MOV     row, 0          ; and row.
         
