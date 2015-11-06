@@ -25,5 +25,5 @@ KEY_ROW_SHIFT       EQU     4       ; Amount to shift index to encode key row.
 DEBOUNCE_TIME       EQU     10      ; Time in ms to debounce a key press to
                                     ; make sure a button was actually pressed.
 REPEAT_TIME         EQU     5000    ; Time in ms until start fast repeating (5s)
-DEFAULT_RPT_RATE    EQU     2000    ; slow repeat rate (0.5 Hz)
-FAST_RPT_RATE       EQU     500     ; fast repeat rate (2 Hz)
+DEFAULT_RPT_RATE    EQU     1000    ; slow repeat rate (1 Hz)
+FAST_RPT_RATE       EQU     250     ; fast repeat rate (4 Hz)
