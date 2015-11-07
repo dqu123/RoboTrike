@@ -11,7 +11,7 @@
 ; Description:      This program tests the keypad functions for Homework #5.  
 ;                   First, it initializes the chip select, timer interrupts,
 ;                   and, display and keypad shared variables. Then it calls
-;                   the KeyTest function 
+;                   the KeyTest function to test the keypad.
 ;
 ; Input:            Keypad.
 ; Output:           Display.
@@ -28,7 +28,8 @@
 ; Limitations:      None.
 ;
 ; Revision History:
-;    10/29/15  David Qu	               initial revision
+;    11/5/15  David Qu	               initial revision
+;    11/6/15  David Qu                 added comments
 
 ; local include files
 

@@ -105,10 +105,10 @@ InitCS  ENDP
 ; Data Structures:  None.
 ;
 ; Registers Used:   flags, AX, CX, SI, ES
-; Stack Depth:      1 word
+; Stack Depth:      0 words.
 ;
 ; Author:           Glen George
-; Last Modified:    Feb. 8, 2002
+; Last Modified:    Nov 7, 2015 (David Qu)
 
 ClrIRQVectors   PROC    NEAR
 				PUBLIC	ClrIRQVectors
@@ -117,25 +117,25 @@ InitClrVectorLoop:              ;setup to store the same handler 256 times
 
         XOR     AX, AX          ;clear ES (interrupt vectors are in segment 0)
         MOV     ES, AX
-        MOV     SI, 0           ;initialize SI to skip RESERVED_VECS (4 bytes each)
+        MOV     SI, 0           ;initialize SI 
 
-        MOV     CX, 256         ;up to 256 vectors to initialize
+        MOV     CX, NUM_IRQ_VECTORS ;number of vectors to initialize
 
 
 ClrVectorLoop:                  ;loop clearing each vector
 								;check if should store the vector
-		CMP     SI, 4 * FIRST_RESERVED_VEC
+		CMP     SI, VECTOR_SIZE * FIRST_RESERVED_VEC
 		JB		DoStore			;if before start of reserved field - store it
-		CMP		SI, 4 * LAST_RESERVED_VEC
+		CMP		SI, VECTOR_SIZE * LAST_RESERVED_VEC
 		JBE		DoneStore		;if in the reserved vectors - don't store it
 		;JA		DoStore			;otherwise past them - so do the store
 
 DoStore:                        ;store the vector
         MOV     ES: WORD PTR [SI], OFFSET(IllegalEventHandler)
-        MOV     ES: WORD PTR [SI + 2], SEG(IllegalEventHandler)
+        MOV     ES: WORD PTR [SI + VECTOR_SEG], SEG(IllegalEventHandler)
 
 DoneStore:						;done storing the vector
-        ADD     SI, 4           ;update pointer to next vector
+        ADD     SI, VECTOR_SIZE ;update pointer to next vector
 
         LOOP    ClrVectorLoop   ;loop until have cleared all vectors
         ;JMP    EndClrIRQVectors;and all done

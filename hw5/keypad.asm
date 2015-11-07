@@ -228,10 +228,11 @@ InitKeypad     ENDP
 
 ResetKeypad     PROC        NEAR
         
-        MOV     key, NO_KEY_VALUE
-        MOV     debCntr, DEBOUNCE_TIME
-        MOV     rptCntr, REPEAT_TIME
-        MOV     rptRate, DEFAULT_RPT_RATE
+        MOV     key, NO_KEY_VALUE         ; Reset key, debCntr, rptCntr, and
+        MOV     debCntr, DEBOUNCE_TIME    ; rptRate, so the next key can be
+        MOV     rptCntr, REPEAT_TIME      ; debounced properly. Don't reset
+        MOV     rptRate, DEFAULT_RPT_RATE ; row because it needs to change
+                                          ; to scan different rows.
         
         RET
 
@@ -353,7 +354,7 @@ ScanKeypad  ENDP
 ; Known Bugs:        None.
 ; Limitations:       Assumes keypad shared variables have been properly initialized.
 ;
-; Registers Changed: flags, AX.
+; Registers Changed: flags, AX, BX.
 ; Special notes:     None.
 
 KeypadDebounce  PROC        NEAR
@@ -378,27 +379,27 @@ NextRow:
                                       ;call to KeypadDebounce.
         
 CheckRptCntr:
-        DEC     rptCntr
-        ;JZ     FastRepeat 
-        JNZ     CheckDebCntr
+        DEC     rptCntr               ;Check the rptCntr to see if
+        ;JZ     FastRepeat            ;fast repeat should be activated.
+        JNZ     CheckDebCntr          ;Then check debCntr.
 
 FastRepeat:
-        MOV     rptRate, FAST_RPT_RATE
+        MOV     rptRate, FAST_RPT_RATE ;change repeat rate to fast repeat.
         ;JMP    CheckDebCntr
         
 CheckDebCntr:
-        DEC     debCntr
-        ;JZ     DebounceKeypad
+        DEC     debCntr               ;Check debCntr to see if the key
+        ;JZ     DebounceKeypad        ;should be debounced.
         JNZ     WaitToDebounce
 
 DebounceKeypad:
-        MOV     BX, rptRate
-        MOV     debCntr, BX
-        MOV     AH, TRUE
+        MOV     BX, rptRate           ;If the key should be debounced,
+        MOV     debCntr, BX           ;reset the debCntr to the rptRate,
+        MOV     AH, TRUE              ;and return TRUE, with the key in AL.
         JMP     EndKeypadDebounce
 
 WaitToDebounce:
-        MOV     AH, FALSE
+        MOV     AH, FALSE             ;Return false if still waiting to debounce.
         ;JMP    EndKeypadDebounce
 
 EndKeypadDebounce:

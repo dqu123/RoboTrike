@@ -37,3 +37,6 @@ MPCSval         EQU     00183H          ;PCS in I/O space, use PCS5/6, 3 wait st
 FIRST_RESERVED_VEC	EQU		1	;reserve vectors 1-3
 LAST_RESERVED_VEC	EQU		3
 NUM_IRQ_VECTORS     EQU     256 ;number of interrupt vectors
+VECTOR_SIZE         EQU     4   ;size of each interrupt vector entry in bytes.
+VECTOR_SEG          EQU     2   ;byte offset to access the segment word in the
+                                ;IVT.
