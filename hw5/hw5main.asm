@@ -17,7 +17,9 @@
 ; Output:           Display.
 ;
 ; User Interface:   The user can press various key combinations, and any
-;                   resulting events will displayed on the LED display. 
+;                   resulting events will displayed on the LED display. The
+;                   keypress and the number of times it has been pressed will 
+;                   be displayed.
 ;
 ; Error Handling:   None.
 ;
@@ -87,9 +89,6 @@ MAIN:
         STI                             ;and finally allow interrupts.
 
 		CALL 	KeyTest				    ;run test routine.
- 
-InfiniteLoop:
-        JMP     InfiniteLoop   
 
         RET                             ;Exit program.
 
