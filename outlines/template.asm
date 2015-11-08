@@ -6,6 +6,12 @@
 ;                                                                              ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 
+; Public functions:
+; Function1   - 
+;
+; Local functions:
+; Function2   - 
+
 ; Function1
 ; 
 ; Description:       
