@@ -73,7 +73,7 @@ DATA    SEGMENT PUBLIC  'DATA'
     total_speed     DW  ?   ; desired total speed of RoboTrike. This is measured
                             ; on a unitless scale from 0 to MAX_TOTAL_SPEED 
                             ; because there is no feedback mechanism to determine
-                            ; actual speed in the system
+                            ; actual speed in the system.
     angle           DW  ?   ; desired angle of RoboTrike in degrees.
     laserOn         DB  ?   ; boolean whether the laser is on.
     speed_array     DW  NUM_MOTORS  DUP (?) ; speeds for each motor.
@@ -84,19 +84,20 @@ DATA    ENDS
 ; HandleMotors
 ; 
 ; Description: Rotates the three motors according to the speed_array shared
-;              variable to produce holonomic motion. Increments a timer MOD
+;              variable to produce holonomic motion. Increments motor_count MOD
 ;              MAX_SPEED for Pulse Width Modulation (PWM).
 ;    
 ; Operation:   Rotates each motor according to its speed by Pulse Width Modulation
 ;              (PWM). This is done by comparing the motor_count to the speed,
 ;              and only rotating the motor if motor_count <= its speed.
-;              
+;              Finally, increments motor_count MOD MAX_SPEED_COUNT.
 ;
 ; Arguments:         None.
 ; Return Value:      None.
 ;
 ; Local Variables:   i (BX) - index variable.
 ; Shared Variables:  Reads from speed_array - byte array of individual motor speeds.
+;                    Write to motor_count - count of timer ticks for PWM.
 ; Global Variables:  None.
 ;
 ; Input:             None.
@@ -180,7 +181,8 @@ DATA    ENDS
 ;                    angle ranges from MIN_ANGLE_CHANGE to MAX_ANGLE_CHANGE,
 ;                    can be set to NO_ANGLE_CHANGE if only the speed needs
 ;                    to change. 
-; Operation:         Updates total_speed and angle appropriately, and then
+; Operation:         Updates total_speed and angle appropriately if they are
+;                    not NO_SPEED_CHANGE nor NO_ANGLE_CHANGE, and then
 ;                    computes the corresponding NUM_MOTORS motor speeds in
 ;                    the speed_array using trigonometry from a table, and
 ;                    the MotorForceTable.
