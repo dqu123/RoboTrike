@@ -85,7 +85,8 @@ DATA    ENDS
 ; 
 ; Description: Rotates the three motors according to the speed_array shared
 ;              variable to produce holonomic motion. Increments motor_count MOD
-;              MAX_SPEED for Pulse Width Modulation (PWM).
+;              MAX_SPEED for Pulse Width Modulation (PWM). Must be set up as
+;              a Timer Event Handler to work properly.
 ;    
 ; Operation:   Rotates each motor according to its speed by Pulse Width Modulation
 ;              (PWM). This is done by comparing the motor_count to the speed,
