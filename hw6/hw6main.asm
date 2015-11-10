@@ -11,10 +11,13 @@
 ; Description:      This program tests the motor functions for Homework #6.  
 ;                   First, it initializes the chip select, timer interrupts,
 ;                   and, motor shared variables. Then it calls the MotorTest
-;                   function to test the keypad.
+;                   function to test the keypad. This procedure runs each
+;                   test case and then waits for a keypress before moving on 
+;                   to the next test case. The test case number is displayed
+;                   on the LED display.
 ;
-; Input:            None.
-; Output:           Motor (must connect to parallel output).
+; Input:            Keypad.
+; Output:           Display, parallel output (82C55A chip).
 ;
 ; User Interface:   The user needs to connect to a motor set up or a
 ;                   oscilloscope to test the PWM signal. The test run through
@@ -31,6 +34,7 @@
 ;
 ; Revision History:
 ;    11/12/15  David Qu	               initial revision
+;    11/13/15  David Qu                updated comments
 
 ; local include files
 

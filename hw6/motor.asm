@@ -98,7 +98,7 @@ StopTable           LABEL   BYTE                ; Bit patterns for stopping
 ; Arguments:         None.
 ; Return Value:      None.
 ;
-; Local Variables:   output (AX) - bits to write to the 82A55C chip.
+; Local Variables:   output (AL) - bits to write to the 82A55C chip.
 ;                    i (BX) - index variable.
 ; Shared Variables:  Reads from speed_array - byte array of individual motor speeds.
 ;                    Write to motor_count - count of timer ticks for PWM.
@@ -129,18 +129,20 @@ StartHandleMotors:
         XOR     BX, BX
 
 CheckLaser:
-        CMP      laserOn, FALSE
-        JE       HandleMotorsLoop
-        ;JNE     FireLaser
+        CMP      laserOn, FALSE             ; Check if the laser is on,
+        JE       HandleMotorsLoop           ; and the laser fire bit pattern
+        ;JNE     FireLaser                  ; if it is.
  
 FireLaser:
-        OR      AL, LaserOnVAl
+        OR      AL, LaserOnVAl              ; Add the laser fire bit pattern
+                                            ; to AL.
                 
 HandleMotorsLoop:
-        CMP     BYTE PTR speed_array[BX], 0
-        JG      PositiveSpeed
-        JE      StopMotor
-        JL      NegativeSpeed
+        CMP     BYTE PTR speed_array[BX], 0 ; Determine the sign of the speed.
+        JG      PositiveSpeed               ; If positive compare to motor_count directly.
+        JE      StopMotor                   ; If 0, stop the motor.
+        JL      NegativeSpeed               ; If negative, negate the speed and
+                                            ; then compare to the motor_count.
 
 PositiveSpeed:
         MOV     CL, BYTE PTR speed_array[BX]
@@ -168,8 +170,8 @@ EndHandleMotorsLoop:
         ;JGE    UpdateMotors
 
 UpdateMotors:
-        MOV     DX, PeriphChipPortB
-        OUT     DX, AL
+        MOV     DX, PeriphChipPortB         ; Write bitpattern to PortB in the       
+        OUT     DX, AL                      ; Peripheral Chip.
 
 UpdateMotorCount:
         INC     motor_count
