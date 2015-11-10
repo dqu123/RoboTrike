@@ -16,9 +16,14 @@
 ; GetMotorDirection()        - Return the direction of the RoboTrike.
 ; SetLaser(onoff)            - Sets the laser on or off.
 ; GetLaser()                 - Return the status of the laser.
-
+;
 ; Local functions:
 ; None.
+;
+; Revision History:
+; 		11/12/15  David Qu		initial revision.
+
+
 
 ; Motor details:
 ; The RoboTrike has three motors, equally spaced out in a circle. These 

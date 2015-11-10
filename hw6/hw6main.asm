@@ -2,24 +2,24 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;                                                                            ;
-;                                   HW5MAIN                                  ;
+;                                   HW6MAIN                                  ;
 ;                            Homework #6 Test Code                           ;
 ;                                  EE/CS  51                                 ;
 ;                                                                            ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Description:      This program tests the keypad functions for Homework #5.  
+; Description:      This program tests the motor functions for Homework #6.  
 ;                   First, it initializes the chip select, timer interrupts,
-;                   and, display and keypad shared variables. Then it calls
-;                   the KeyTest function to test the keypad.
+;                   and, motor shared variables. Then it calls the MotorTest
+;                   function to test the keypad.
 ;
-; Input:            Keypad.
-; Output:           Display.
+; Input:            None.
+; Output:           Motor (must connect to parallel output).
 ;
-; User Interface:   The user can press various key combinations, and any
-;                   resulting events will displayed on the LED display. The
-;                   keypress and the number of times it has been pressed will 
-;                   be displayed.
+; User Interface:   The user needs to connect to a motor set up or a
+;                   oscilloscope to test the PWM signal. The test run through
+;                   the function calls described at:
+;                   wolverine.caltech.edu/eecs51/homework/hw6/hw6test.htm
 ;
 ; Error Handling:   None.
 ;
@@ -30,8 +30,7 @@
 ; Limitations:      None.
 ;
 ; Revision History:
-;    11/5/15  David Qu	               initial revision
-;    11/6/15  David Qu                 added comments
+;    11/12/15  David Qu	               initial revision
 
 ; local include files
 
@@ -54,7 +53,7 @@ CODE    SEGMENT PUBLIC 'CODE'
         EXTRN   InstallTimer0Handler:NEAR   ;Install motor handlers on timer 0.
         EXTRN   InitTimer0:NEAR             ;Initialize timer 0.
 		EXTRN 	InitMotors:NEAR             ;Initialize motor shared variables.
-		EXTRN   MotorTest:NEAR                ;Shows enqueued events in display.
+		EXTRN   MotorTest:NEAR              ;Tests various motor speeds and angles.
 
 START:  
 
