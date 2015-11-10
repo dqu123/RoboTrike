@@ -327,7 +327,7 @@ DATA    ENDS
 ; Return Value:      laserOn (AX).
 ;
 ; Local Variables:   None.
-; Shared Variables:  None.
+; Shared Variables:  Reads laserOn - boolean determining laser state.
 ; Global Variables:  None.
 ;
 ; Input:             None.
