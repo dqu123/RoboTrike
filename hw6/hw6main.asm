@@ -76,8 +76,8 @@ MAIN:
 
 		CALL 	InitMotors
 		
-        ;CALL    InitTimer0              ;initialize the internal timer
-        ;STI                             ;and finally allow interrupts.
+        CALL    InitTimer0              ;initialize the internal timer
+        STI                             ;and finally allow interrupts.
 
 		CALL 	MotorTest				;run test routine.
 
