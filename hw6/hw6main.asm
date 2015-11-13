@@ -1,0 +1,108 @@
+        NAME    HW5MAIN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;                                                                            ;
+;                                   HW6MAIN                                  ;
+;                            Homework #6 Test Code                           ;
+;                                  EE/CS  51                                 ;
+;                                                                            ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Description:      This program tests the motor functions for Homework #6.  
+;                   First, it initializes the chip select, timer interrupts,
+;                   and, motor shared variables. Then it calls the MotorTest
+;                   function to test the keypad.
+;
+; Input:            None.
+; Output:           Motor (must connect to parallel output).
+;
+; User Interface:   The user needs to connect to a motor set up or a
+;                   oscilloscope to test the PWM signal. The test run through
+;                   the function calls described at:
+;                   wolverine.caltech.edu/eecs51/homework/hw6/hw6test.htm
+;
+; Error Handling:   None.
+;
+; Algorithms:       None.
+; Data Structures:  None.
+;
+; Known Bugs:       None.
+; Limitations:      None.
+;
+; Revision History:
+;    11/12/15  David Qu	               initial revision
+
+; local include files
+
+
+CGROUP  GROUP   CODE
+DGROUP  GROUP   DATA, STACK
+
+
+
+CODE    SEGMENT PUBLIC 'CODE'
+
+
+        ASSUME  CS:CGROUP, DS:DGROUP
+
+
+; external function declarations
+
+		EXTRN	InitCS:NEAR			        ;Initialize Chip Select.
+        EXTRN   ClrIRQVectors:NEAR          ;Clear Interrupt Vector Table.
+        EXTRN   InstallTimer0Handler:NEAR   ;Install motor handlers on timer 0.
+        EXTRN   InitTimer0:NEAR             ;Initialize timer 0.
+		EXTRN 	InitMotors:NEAR             ;Initialize motor shared variables.
+		EXTRN   MotorTest:NEAR              ;Tests various motor speeds and angles.
+
+START:  
+
+MAIN:
+        MOV     AX, DGROUP              ;initialize the stack pointer
+        MOV     SS, AX
+        MOV     SP, OFFSET(TopOfStack)
+
+        MOV     AX, DGROUP              ;initialize the data segment
+        MOV     DS, AX
+
+
+        CALL    InitCS                  ;initialize the 80188 chip selects
+                                        ;   assumes LCS and UCS already setup
+
+        CALL    ClrIRQVectors           ;clear (initialize) interrupt vector table
+
+        
+        CALL    InstallTimer0Handler    ;install the event handler
+                                        ;   ALWAYS install handlers before
+                                        ;   allowing the hardware to interrupt.
+
+		CALL 	InitMotors
+		
+        CALL    InitTimer0              ;initialize the internal timer
+        STI                             ;and finally allow interrupts.
+
+		CALL 	MotorTest				;run test routine.
+
+        RET                             ;Exit program.
+
+CODE    ENDS
+
+
+; the data segment
+DATA    SEGMENT PUBLIC  'DATA'
+
+DATA    ENDS
+
+
+; the stack
+STACK   SEGMENT STACK  'STACK'
+
+                DB      80 DUP ('Stack ')       ; 240 words
+
+TopOfStack      LABEL   WORD
+
+STACK   ENDS
+
+
+
+        END     START
