@@ -29,7 +29,8 @@ PeriphChipVal   EQU     80H             ;Value for 82A55C peripheral chip.
                                         ;-----0--  GROUP B MODE 0
                                         ;------0-  Port B output mode
                                         ;-------0  Port C (Lower) output mode
-
+                                        
+LaserOnVal      EQU     10000000b       ;1------- Activates laser. 
                                         
 ; Trig constants
 CIRCLE_DEGREES      EQU     360   ; Number of degrees in a circle.

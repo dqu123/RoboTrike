@@ -67,15 +67,15 @@ MotorForceYTable    LABEL   WORD               ; Q0.15 value for motor force
   
 RotateForwardTable  LABEL   BYTE               ; Bit patterns for rotating
                     PUBLIC  RotateForwardTable ; motor i forward.
-        DW      10000000b    ; Motor 1
-        DW      00100000b    ; Motor 2
-        DW      00001000b    ; Motor 3
+        DW      00000010b    ; Motor 1
+        DW      00001000b    ; Motor 2
+        DW      00100000b    ; Motor 3
 
 RotateBackwardTable LABEL   BYTE                ; Bit patterns for rotating
                     PUBLIC  RotateBackwardTable ; motor i backward.
-        DW      11000000b    ; Motor 1
-        DW      00110000b    ; Motor 2
-        DW      00001100b    ; Motor 3
+        DW      00000011b    ; Motor 1
+        DW      00001100b    ; Motor 2
+        DW      00110000b    ; Motor 3
 
 StopTable           LABEL   BYTE                ; Bit patterns for stopping
                     PUBLIC  StopTable ; motor i.
@@ -127,7 +127,15 @@ StartHandleMotors:
         PUSHA
         XOR     AX, AX
         XOR     BX, BX
-        
+
+CheckLaser:
+        TEST     laserOn, FALSE
+        JE       HandleMotorsLoop
+        ;JNE     FireLaser
+ 
+FireLaser:
+        OR      AL, LaserOnVAl
+                
 HandleMotorsLoop:
         CMP     WORD PTR speed_array[BX], 0
         JG      PositiveSpeed
@@ -241,7 +249,7 @@ InitMotorsLoop:
         ;JGE    EndInitMotors
 
 InitPeriphChip:
-        MOV     DX, PeriphCtrlChip
+        MOV     DX, PeriphChipCtrl
         MOV     AL, PeriphChipVal
         OUT     DX, AL
 
@@ -297,7 +305,7 @@ SetMotorSpeed      PROC     NEAR
                    PUBLIC   SetMotorSpeed
 
         PUSHA   ; Save caller registers.
-        
+
 CheckSpeed:
         CMP     AX, NO_SPEED_CHANGE     ; Check if the speed needs to be
         ;JE      SetTotalSpeed          ; set. If speed == NO_SPEED_CHANGE,
@@ -315,9 +323,9 @@ CheckAngle:
         JNE     SetMotorSpeedLoop       ; then it is ignored.
         
 SetTotalAngle:
-        XOR     DX, DX                  ; Sets the angle shared variable to
-        MOV     AX, BX                  ; the new_angle MOD CIRCLE_DEGREES,
-        MOV     BX, CIRCLE_DEGREES      ; making sure set a value between 0
+        MOV     AX, BX                  ; Sets the angle shared variable to
+        MOV     BX, CIRCLE_DEGREES      ; the new_angle MOD CIRCLE_DEGREES, 
+        CWD                             ; making sure set a value between 0
         IDIV    BX                      ; and CIRCLE_DEGREES.
          
         CMP     DX, 0                   ; Check if remainder is negative MOD
