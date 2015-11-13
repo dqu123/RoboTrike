@@ -42,13 +42,11 @@ POSITIVE_Q0_15_SHIFT EQU    1     ; Amount to shift to convert from a 16-bit
                                         
 ; Motor constants
 NUM_MOTORS          EQU     3     ; Total number of motors
-FORCE_SIZE          EQU     4     ; Number of bytes in each force entry. (2 bytes
+FORCE_SIZE          EQU     2     ; Number of bytes in each force entry. (2 bytes
                                   ; per component).
-FORCE_SHIFT         EQU     2     ; Amount to shift to convert from a force index
+FORCE_SHIFT         EQU     1     ; Amount to shift to convert from a force index
                                   ; to a byte index in the MotorForceTable.
                                   ; = log_2(FORCE_SIZE).
-SPEED_SIZE          EQU     2     ; Number of bytes in each speed entry.
-SPEED_SHIFT         EQU     1     ; = log_2(SPEED_SIZE)
 SPEED_PRECISION     EQU     8     ; Bits of precision, maximum is 8.
 FIXED_POINT_SHIFT   EQU     10 - SPEED_PRECISION ; Amount to shift the fixed point
                                   ; values after 2 Q0.15 multiplications.

@@ -67,21 +67,21 @@ MotorForceYTable    LABEL   WORD               ; Q0.15 value for motor force
   
 RotateForwardTable  LABEL   BYTE               ; Bit patterns for rotating
                     PUBLIC  RotateForwardTable ; motor i forward.
-        DW      00000010b    ; Motor 1
-        DW      00001000b    ; Motor 2
-        DW      00100000b    ; Motor 3
+        DB      00000010b    ; Motor 1
+        DB      00001000b    ; Motor 2
+        DB      00100000b    ; Motor 3
 
 RotateBackwardTable LABEL   BYTE                ; Bit patterns for rotating
                     PUBLIC  RotateBackwardTable ; motor i backward.
-        DW      00000011b    ; Motor 1
-        DW      00001100b    ; Motor 2
-        DW      00110000b    ; Motor 3
+        DB      00000011b    ; Motor 1
+        DB      00001100b    ; Motor 2
+        DB      00110000b    ; Motor 3
 
 StopTable           LABEL   BYTE                ; Bit patterns for stopping
                     PUBLIC  StopTable ; motor i.
-        DW      00000000b    ; Motor 1
-        DW      00000000b    ; Motor 2
-        DW      00000000b    ; Motor 3
+        DB      00000000b    ; Motor 1
+        DB      00000000b    ; Motor 2
+        DB      00000000b    ; Motor 3
 
         
 ; HandleMotors
@@ -129,7 +129,7 @@ StartHandleMotors:
         XOR     BX, BX
 
 CheckLaser:
-        TEST     laserOn, FALSE
+        CMP      laserOn, FALSE
         JE       HandleMotorsLoop
         ;JNE     FireLaser
  
@@ -137,22 +137,22 @@ FireLaser:
         OR      AL, LaserOnVAl
                 
 HandleMotorsLoop:
-        CMP     WORD PTR speed_array[BX], 0
+        CMP     BYTE PTR speed_array[BX], 0
         JG      PositiveSpeed
         JE      StopMotor
         JL      NegativeSpeed
 
 PositiveSpeed:
-        MOV     CX, WORD PTR speed_array[BX]
-        CMP     motor_count, CX 
+        MOV     CL, BYTE PTR speed_array[BX]
+        CMP     motor_count, CL 
         JG      StopMotor
         OR      AL, RotateForwardTable[BX]
         JMP     EndHandleMotorsLoop
         
 NegativeSpeed:
-        MOV     CX, WORD PTR speed_array[BX]
-        NEG     CX
-        CMP     motor_count, CX
+        MOV     CL, BYTE PTR speed_array[BX]
+        NEG     CL
+        CMP     motor_count, CL
         JG      StopMotor
         OR      AL, RotateBackwardTable[BX]
         JMP     EndHandleMotorsLoop
@@ -308,8 +308,8 @@ SetMotorSpeed      PROC     NEAR
 
 CheckSpeed:
         CMP     AX, NO_SPEED_CHANGE     ; Check if the speed needs to be
-        ;JE      SetTotalSpeed          ; set. If speed == NO_SPEED_CHANGE,
-        JNE     CheckAngle              ; then it is ignored.
+        ;JNE      SetTotalSpeed         ; set. If speed == NO_SPEED_CHANGE,
+        JE     CheckAngle               ; then it is ignored.
         
 SetTotalSpeed:
         SHR     AX, POSITIVE_Q0_15_SHIFT; Convert from a word unsigned speed to
@@ -319,8 +319,8 @@ SetTotalSpeed:
 
 CheckAngle:
         CMP     BX, NO_ANGLE_CHANGE     ; Check if the angle needs to be set.
-        ;JE      SetTotalSpeed          ; If new_angle == NO_ANGLE_CHANGE,
-        JNE     SetMotorSpeedLoop       ; then it is ignored.
+        ;JME    SetTotalAngle         ; If new_angle == NO_ANGLE_CHANGE,
+        JE     SetMotorSpeedLoop       ; then it is ignored.
         
 SetTotalAngle:
         MOV     AX, BX                  ; Sets the angle shared variable to
@@ -347,6 +347,8 @@ SetMotorSpeedLoop:
         SHL     SI, TRIG_TABLE_SHIFT   ; compute cos(a) and sin(a).
         
         XOR     DX, DX                 ; Clear DX for IMUL.
+        SHL     BX, FORCE_SHIFT        ; Convert from motor index to byte index
+                                       ; in force tables (which are word tables).
         IMUL    MotorForceXTable[BX]   ; Compute F_xi * s as a Q0.30
         MOV     AX, DX                 ; Move top byte of result to AX to chain multiply.
                                        ; This truncates to a Q0.14.
@@ -358,26 +360,29 @@ SetMotorSpeedLoop:
         MOV     AX, total_speed        ; Prepare to compute F_yi * s * sin(a)
         XOR     DX, DX                 ; Clear DX for IMUL.
         IMUL    MotorForceYTable[BX]   ; Compute F_yi * s as a Q0.30
+        SHR     BX, FORCE_SHIFT        ; Convert back to motor index from byte index
+                                       ; in force tables (which are word tables).
         MOV     AX, DX                 ; Move top byte of result to AX to chain multiply.
                                        ; This truncates to a Q0.14.
         XOR     DX, DX                 ; Clear DX for IMUL.
         IMUL    WORD PTR Sin_table[SI] ; Compute F_yi * s * sin(a), the y 
                                        ; contribution of the i-th motor's velocity
                                        ; in DX as a Q0.13.
-        
+  
         ADD     CX, DX                 ; Add the x and y contributions to get
                                        ; the total speed as a Q0.13.
-        SAL     DX, FIXED_POINT_SHIFT  ; Convert from a Q0.13 (3 repeated sign
+ConvertFromFixedPoint:
+        SAL     CX, FIXED_POINT_SHIFT  ; Convert from a Q0.13 (3 repeated sign
                                        ; bits due to 2 multiplications) to 
                                        ; an integer with SPEED_PRECISION bits
-                                       ; of precision. 
-        MOV     speed_array[BX], CX    ; Updated speed_array with new speed.
+                                       ; of precision. This leaves a valid
+                                       ; word in CH.
         
-        ADD     BX, SPEED_SIZE         ; Increment index, moving to the next motor.
-                                       ; This works because all look-ups are to
-                                       ; word tables, which is the size of the
-                                       ; speed_array, so BX is the index in bytes.
-        CMP     BX, NUM_MOTORS * SPEED_SIZE ; Check if all motors have been done.
+UpdateSpeedArray:
+        MOV     speed_array[BX], CH    ; Updated speed_array with new speed.
+        
+        INC     BX                     ; Increment index, moving to the next motor.
+        CMP     BX, NUM_MOTORS         ; Check if all motors have been done.
         JL      SetMotorSpeedLoop      ; Loop if not done.
         ;JGE    EndSetMotorSpeed
         
@@ -547,7 +552,7 @@ CODE    ENDS
 ; Shared variables.
 DATA    SEGMENT PUBLIC  'DATA'
     
-    motor_count     DW  ?   ; timer for setting the motor speeds via pulse width
+    motor_count     DB  ?   ; timer for setting the motor speeds via pulse width
                             ; modulation (PWM).
     total_speed     DW  ?   ; desired total speed of RoboTrike. This is measured
                             ; on a unitless scale from 0 to MAX_TOTAL_SPEED 
@@ -555,7 +560,7 @@ DATA    SEGMENT PUBLIC  'DATA'
                             ; actual speed in the system.
     angle           DW  ?   ; desired angle of RoboTrike in degrees.
     laserOn         DB  ?   ; boolean whether the laser is on.
-    speed_array     DW  NUM_MOTORS  DUP (?) ; speeds for each motor.
+    speed_array     DB  NUM_MOTORS  DUP (?) ; speeds for each motor.
 
     
 DATA    ENDS
