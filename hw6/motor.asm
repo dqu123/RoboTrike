@@ -138,22 +138,21 @@ FireLaser:
                                             ; to AL.
                 
 HandleMotorsLoop:
-        CMP     BYTE PTR speed_array[BX], 0 ; Determine the sign of the speed.
+        MOV     CL, BYTE PTR speed_array[BX]
+        CMP     CL, 0                       ; Determine the sign of the speed.
         JG      PositiveSpeed               ; If positive compare to motor_count directly.
         JE      StopMotor                   ; If 0, stop the motor.
         JL      NegativeSpeed               ; If negative, negate the speed and
                                             ; then compare to the motor_count.
 
 PositiveSpeed:
-        MOV     CL, BYTE PTR speed_array[BX]
-        CMP     motor_count, CL 
+        CMP     motor_count, CL             ; If speed is positive,
         JG      StopMotor
         OR      AL, RotateForwardTable[BX]
         JMP     EndHandleMotorsLoop
         
 NegativeSpeed:
-        MOV     CL, BYTE PTR speed_array[BX]
-        NEG     CL
+        NEG     CL                          ;
         CMP     motor_count, CL
         JG      StopMotor
         OR      AL, RotateBackwardTable[BX]
@@ -164,9 +163,9 @@ StopMotor:
         ;JMP    EndHandleMotorsLoop
         
 EndHandleMotorsLoop:
-        INC     BX
-        CMP     BX, NUM_MOTORS
-        JL      HandleMotorsLoop
+        INC     BX                          ; Update motor index.
+        CMP     BX, NUM_MOTORS              ; Stop looping when done with all
+        JL      HandleMotorsLoop            ; motors.
         ;JGE    UpdateMotors
 
 UpdateMotors:
@@ -174,8 +173,8 @@ UpdateMotors:
         OUT     DX, AL                      ; Peripheral Chip.
 
 UpdateMotorCount:
-        INC     motor_count
-        AND     motor_count, MAX_SPEED_COUNT - 1
+        INC     motor_count                      ; Update the motor_count
+        AND     motor_count, MAX_SPEED_COUNT - 1 ; MOD MAX_SPEED_COUNT.
 
 EndHandleMotors:                    ;done taking care of the timer
         MOV     DX, INTCtrlrEOI     ;send the EOI to the interrupt controller

@@ -46,4 +46,6 @@ Tmr0VecOffset   EQU     4 * Tmr0Vec     ;location for EH offset in IVT.
 Tmr0VecSeg      EQU     4 * Tmr0Vec + 2 ;location for EH seg in IVT.
 
 ; Timing Definitions
-COUNTS_PER_MS   EQU     2304	;number of timer counts per 1 ms (assumes 18.432 MHz clock)
+COUNTS_PER_MS    EQU    2304	;number of timer counts per 1 ms (assumes 18.432 MHz clock)
+COUNTS_PER_MOTOR EQU    600     ; = 2304 kHz / desired rate. 
+                                ; desired rate = 3840 Hz = 30 Hz * 128 (MAX_SPEED_COUNT)
