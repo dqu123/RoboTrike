@@ -9,7 +9,7 @@
 ; This file contains constants for the timers.
 ;
 ; Revision History:
-;	 11/5/15  David Qu			initial revision
+;	 11/12/15  David Qu			initial revision
 
 ; Addresses
 PeriphBase  EQU     0FF00H            ;address of peripheral control block
@@ -32,7 +32,7 @@ Tmr0CtrlVal     EQU     0E001H          ;value to write to Timer 0 Control Regis
 ; Interrupt Controller Definitions
 
 ; Addresses
-INTCtrlrCtrl    EQU     0FF32H          ;address of interrupt controller for timer
+INTCtrlrCtrl    EQU     PeriphBase + 032H ;address of interrupt controller for timer
 
 ; Register Values
 INTCtrlrCVal    EQU     00001H          ;set priority for timers to 1 and enable

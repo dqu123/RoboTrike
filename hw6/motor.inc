@@ -12,6 +12,7 @@
 ;
 ; Revision History:
 ;	 11/12/15  David Qu			initial revision
+; 	 11/14/15  David Qu			added DEFAULT_ANGLE
 
 ; Chip Select Unit Definitions
 

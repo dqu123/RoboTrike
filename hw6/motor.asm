@@ -22,6 +22,8 @@
 ;
 ; Revision History:
 ; 		11/12/15  David Qu		initial revision.
+;		11/13/15  David Qu		Fixed bugs and added comments. 
+;		11/14/15  David Qu		Added more comments.
 
 
 
