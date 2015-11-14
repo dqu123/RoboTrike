@@ -126,7 +126,7 @@ InitTimer0      PROC    NEAR
         OUT     DX, AL
 
         MOV     DX, Tmr0MaxCntA     ;setup max count of timer clocks
-        MOV     AX, COUNTS_PER_MS   ;so can time digits
+        MOV     AX, COUNTS_PER_MOTOR;so can time digits
         OUT     DX, AL
 
         MOV     DX, Tmr0Ctrl    ;setup the control register, interrupts on
