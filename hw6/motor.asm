@@ -135,7 +135,7 @@ StartHandleMotors:
 
 CheckLaser:
         CMP      laserOn, FALSE             ; Check if the laser is on,
-        JE       HandleMotorsLoop           ; and the laser fire bit pattern
+        JE       InitHandleMotorsLoop       ; and the laser fire bit pattern
         ;JNE     FireLaser                  ; if it is.
  
 FireLaser:
