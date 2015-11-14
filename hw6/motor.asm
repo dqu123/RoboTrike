@@ -124,9 +124,12 @@ HandleMotors    PROC    NEAR
                 PUBLIC  HandleMotors
 
 StartHandleMotors:
-        PUSHA
-        XOR     AX, AX
-        XOR     BX, BX
+        PUSHA								; Save flags for interrupted code.
+		
+        XOR     AX, AX						; Start with empty bit pattern in
+											; AL. The overall bit pattern
+											; to output will be built up in 
+											; AL.
 
 CheckLaser:
         CMP      laserOn, FALSE             ; Check if the laser is on,
@@ -136,7 +139,10 @@ CheckLaser:
 FireLaser:
         OR      AL, LaserOnVAl              ; Add the laser fire bit pattern
                                             ; to AL.
-                
+
+InitHandleMotorsLoop:											
+		XOR     BX, BX						; Clear loop index.        
+
 HandleMotorsLoop:
         MOV     CL, BYTE PTR speed_array[BX]
         CMP     CL, 0                       ; Determine the sign of the speed.
@@ -146,21 +152,21 @@ HandleMotorsLoop:
                                             ; then compare to the motor_count.
 
 PositiveSpeed:
-        CMP     motor_count, CL             ; If speed is positive,
-        JG      StopMotor
-        OR      AL, RotateForwardTable[BX]
-        JMP     EndHandleMotorsLoop
+        CMP     motor_count, CL             ; If speed is positive, then compare
+        JG      StopMotor					; motor_count to speed, and OR in the
+        OR      AL, RotateForwardTable[BX]  ; forward bit pattern if motor_count
+        JMP     EndHandleMotorsLoop			; <= speed.
         
 NegativeSpeed:
-        NEG     CL                          ;
-        CMP     motor_count, CL
-        JG      StopMotor
-        OR      AL, RotateBackwardTable[BX]
+        NEG     CL                          ; If speed is negative, then compare
+        CMP     motor_count, CL				; motor_count to abs(speed), and OR in
+        JG      StopMotor					; the reverse bit pattern if 
+        OR      AL, RotateBackwardTable[BX]	; motor_count <= abs(speed) 
         JMP     EndHandleMotorsLoop
         
 StopMotor:
-        OR      AL, StopTable[BX]
-        ;JMP    EndHandleMotorsLoop
+        OR      AL, StopTable[BX]			; OR in the stop bit pattern to the
+        ;JMP    EndHandleMotorsLoop			; overall bit pattern.
         
 EndHandleMotorsLoop:
         INC     BX                          ; Update motor index.
@@ -169,8 +175,8 @@ EndHandleMotorsLoop:
         ;JGE    UpdateMotors
 
 UpdateMotors:
-        MOV     DX, PeriphChipPortB         ; Write bitpattern to PortB in the       
-        OUT     DX, AL                      ; Peripheral Chip.
+        MOV     DX, PeriphChipPortB         ; Write overall bit pattern to PortB    
+        OUT     DX, AL                      ; in the Peripheral Chip.
 
 UpdateMotorCount:
         INC     motor_count                      ; Update the motor_count
@@ -196,13 +202,13 @@ HandleMotors    ENDP
 ;                    the motors. This activates the chip as an output chip. 
 ;                    Initializes motor shared variables:
 ;                    motor_count is set to 0, total_speed is set to 0, 
-;                    angle is set to 0, laserOn is set to FALSE, and the 
+;                    angle is set to DEFAULT_ANGLE, laserOn is set to FALSE, and the 
 ;                    speed_array is 0-ed. This ensures that the motors all
 ;                    start at rest, the default angle is in the x direction,
 ;                    and the laser is initially off
 ;
 ; Operation:         Outputs PeriphChipVal to the PeriphCtrlChip. 
-;                    Sets total_speed = 0, angle = 0, laserOn = FALSE, and
+;                    Sets total_speed = 0, angle = DEFAULT_ANGLE, laserOn = FALSE, and
 ;                    speed_array[i] = 0.
 ;
 ; Arguments:         None.
@@ -235,23 +241,23 @@ HandleMotors    ENDP
 InitMotors      PROC    NEAR
                 PUBLIC  InitMotors
 
-        MOV     motor_count, 0
-        MOV     total_speed, 0
-        MOV     angle, 0
-        MOV     laserOn, FALSE
+        MOV     motor_count, 0	; Start counting timer ticks at motor_count = 0.
+        MOV     total_speed, 0	; Default speed is 0, so the Trike is stopped.
+        MOV     angle, DEFAULT_ANGLE ; Start at DEFAULT_ANGLE.
+        MOV     laserOn, FALSE	; Laser is off by default.
         
-        XOR     BX, BX
-
+		
+		XOR     BX, BX				; Initialize loop index to 0.
 InitMotorsLoop:
-        MOV     speed_array[BX], 0
-        INC     BX
-        CMP     BX, NUM_MOTORS
-        JL      InitMotorsLoop
+        MOV     speed_array[BX], 0	; Clear out motor i's speed entry to match
+        INC     BX					; the default speed of 0.
+        CMP     BX, NUM_MOTORS		; Loop through all the motors.
+        JL      InitMotorsLoop		
         ;JGE    EndInitMotors
 
 InitPeriphChip:
-        MOV     DX, PeriphChipCtrl
-        MOV     AL, PeriphChipVal
+        MOV     DX, PeriphChipCtrl	; Initialize the 82C55A peripheral chip
+        MOV     AL, PeriphChipVal	; to the PeriphChipVal.
         OUT     DX, AL
 
 EndInitMotors:

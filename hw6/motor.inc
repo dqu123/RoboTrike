@@ -35,19 +35,24 @@ LaserOnVal      EQU     10000000b       ;1------- Activates laser.
 ; Trig constants
 CIRCLE_DEGREES      EQU     360   ; Number of degrees in a circle.
 TRIG_TABLE_SIZE     EQU     2     ; Size of trig table elements in bytes.  
-TRIG_TABLE_SHIFT    EQU     1     ; Amount to shift to convert from an index of
+TRIG_TABLE_SHIFT    EQU     1     ; Amount to shift left to convert from an index of
                                   ; trig table elements to bytes.
-POSITIVE_Q0_15_SHIFT EQU    1     ; Amount to shift to convert from a 16-bit
+POSITIVE_Q0_15_SHIFT EQU    1     ; Amount to shift right to convert from a 16-bit
                                   ; unsigned integer to a positive Q0.15 value.
-                                        
+
+; Initialization constants
+DEFAULT_ANGLE		EQU 	0	  ; Default angle is in the x-direction.
+								  
 ; Motor constants
 NUM_MOTORS          EQU     3     ; Total number of motors
 FORCE_SIZE          EQU     2     ; Number of bytes in each force entry. (2 bytes
                                   ; per component).
-FORCE_SHIFT         EQU     1     ; Amount to shift to convert from a force index
+FORCE_SHIFT         EQU     1     ; Amount to shift left to convert from a force index
                                   ; to a byte index in the MotorForceTable.
                                   ; = log_2(FORCE_SIZE).
-SPEED_PRECISION     EQU     8     ; Bits of precision, maximum is 8.
+SPEED_PRECISION     EQU     8     ; Bits of precision, maximum is 8 since the
+								  ; speed is truncated to a byte, after each
+								  ; multiplication.
 FIXED_POINT_SHIFT   EQU     10 - SPEED_PRECISION ; Amount to shift the fixed point
                                   ; values after 2 Q0.15 multiplications.
 MAX_SPEED_COUNT     EQU     128   ; Number of counts to wait before reseting to 0.
