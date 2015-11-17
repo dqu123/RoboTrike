@@ -262,13 +262,17 @@ DATA    ENDS
 ; *LINE_CTRL_REG = lineCtrlReg
 ; switch (*INT_IDENT_REG)
 ; case MODEM_STATUS_INT: 
+;     HandleModem()
 ;     break
 ; case TRANSMITTER_EMPTY_INT:
 ;     HandleEmptyTransmitter()
+;     break
 ; case RECEIVED_DATA_INT:
 ;     HandleSerialData()
+;     break
 ; case LINE_STATUS_INT:
 ;     HandleSerialError()
+;     break
 ;
 ; pop_flags()
 ; IRET
@@ -306,7 +310,6 @@ DATA    ENDS
 ;     resetCF() ; CLC
 ; else
 ;     setCF()   ; STC
-
 
 
 ; SetSerialBaudRate(rate)
@@ -400,6 +403,7 @@ DATA    ENDS
 ; Pseudo code:
 ; lineCtrlReg |= NO_PARITY
 
+
 ; SetEvenParity()
 ; 
 ; Description:       Sets even parity on the serial by writing to the lineCtrlReg
@@ -430,6 +434,7 @@ DATA    ENDS
 ; Pseudo code:
 ; lineCtrlReg |= EVEN_PARITY
 
+
 ; SetOddParity()
 ; 
 ; Description:       Sets odd parity on the serial by writing to the lineCtrlReg
@@ -459,6 +464,7 @@ DATA    ENDS
 ; 
 ; Pseudo code:
 ; lineCtrlReg |= ODD_PARITY
+
 
 ; SetLineCtrlReg(value)
 ; 
@@ -589,6 +595,7 @@ DATA    ENDS
 ; Pseudo code:
 ; unsigned word event = SERIAL_DATA_EVENT, *RECIEVER_BUFFER
 ; Enqueue(event)
+
 
 ; HandleModem()
 ; 
