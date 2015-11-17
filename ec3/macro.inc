@@ -106,7 +106,8 @@ $NOLIST
 ;
 ; Description:       This macro translates the 16-bit value in AX to another 16
 ;                    bit value using the table pointed to by BX. Note that this
-;                    calculation assumes
+;                    calculation assumes that AX is a word index, and that 
+;                    BX + 2 * AX <= 0FFFFH.
 ; Operation:         Doubles AX to convert from words to bytes, and then moves
 ;                    the result to SI and uses SI to access BX.
 ; Arguments:         None.
