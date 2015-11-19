@@ -2,8 +2,7 @@
 
 ; Local include files.
 $INCLUDE(macro.inc) 
-      
-$LIST       
+             
 CODE SEGMENT PUBLIC 'CODE'
     ; Test the following macros.
     

@@ -35,7 +35,7 @@ SERIAL_DATA_EVENT   EQU     2       ; Value for a serial data event.
 
 ; Serial Constants
 ; Addresses of registers
-SERIAL_BASE         EQU     ????            ; Base address for serial chip
+SERIAL_BASE         EQU     100H            ; Base address for serial chip
 RECIEVER_BUFFER     EQU     SERIAL_BASE + 0 ; Receiver Buffer Register
 TRANSMITTER_BUFFER  EQU     SERIAL_BASE + 1 ; Transmitter Holding Register
 INT_ENABLE_REG      EQU     SERIAL_BASE + 2 ; Interrupt Enable Register
@@ -86,33 +86,33 @@ EXTRA_STOP_BIT      EQU     00000100b ; -----1-- Sets extra stop bit for lengths
                                       ; 6, 7, 8, and an extra 1/2 stop bit for
                                       ; a word length of 5.
 NO_EXTRA_STOP_BIT   EQU     NOT EXTRA_STOP_BIT ; Clears the extra stop bit when
-                                               ; OR-ed with the LCR.
+                                               ; AND-ed with the LCR.
 
 ENABLE_PARITY       EQU     00001000b ; ----1--- Enables parity checking.
 NO_PARITY           EQU     NOT ENABLE_PARITY ; Disables parity checking when
-                                              ; OR-ed with the LCR.
+                                              ; AND-ed with the LCR.
 EVEN_PARITY         EQU     00010000b ; ---1---- Even parity checking.
 ODD_PARITY          EQU     NOT EVEN_PARITY ; Uses Odd parity checking when
-                                            ; OR-ed with the LCR.
+                                            ; AND-ed with the LCR.
 
 STICK_PARITY        EQU     00100000b ; --1----- Enables stick parity.
 NO_STICK_PARITY     EQU     NOT STICK_PARITY ; Disables stick parity when OR-ed
                                              ; with the LCR.
 LCR_BREAK           EQU     01000000b ; -1------ Sets the break control bit.
 NO_LCR_BREAK        EQU     NOT LCR_BREAK ; Disables the break condition when
-                                          ; OR-ed with the LCR.
+                                          ; AND-ed with the LCR.
 
 ENABLE_DIVISOR_LATCH EQU    10000000b ; 1------- Enables the divisor latch.
 NO_DIVISOR_LATCH    EQU     NOT ENABLE_DIVISOR_LATCH ; Disables the divisor latch
-                                                     ; when OR-ed with the LCR.
+                                                     ; when AND-ed with the LCR.
 
 INIT_LCR            EQU     CHAR_WORD_LENGTH_8 OR   ; Default settings for the
                             NO_EXTRA_STOP_BIT  OR   ; Line Control Register.
                             ENABLE_PARITY      OR 
                             EVEN_PARITY        OR
                             STICK_PARITY       OR
-                            NO_LCR_BREAK       OR
-                            ENABLE_DIVISOR_LATCH
+                            NO_LCR_BREAK       AND
+                            NO_DIVISOR_LATCH
 
 ; external function declarations
         EXTRN   QueueInit:NEAR          ; Initializes queue.
