@@ -11,16 +11,18 @@
 ; Description:      This program tests the serial functions for Homework #7.  
 ;                   First, it initializes the chip select, serial IO registers,
 ;                   and serial shared variables. Then it calls the SerialIOTest
-;                   function to test the keypad. This procedure runs each
-;                   test case and then waits for a keypress before moving on 
-;                   to the next test case. The test case number is displayed
-;                   on the LED display.
+;                   function to test the serial. A program such as RealTerm:
+;                   Serial Capture Program is needed to view the output from
+;                   the serial chip. The string "EE/CS 51 -- the quick brown
+;                   fox jumped over the lazy block dog\r\n" is output 100 times
+;                   numbered from 0 to 99. The user can test the SetSerialBaudRate
+;                   and ToggleParity functions by changing the constants defined
+;                   in hw7main.inc.
 ;
 ; Input:            Serial Input.
-; Output:           Display.
+; Output:           Serial Output.
 ;
 ; User Interface:   None.
-;
 ; Error Handling:   None.
 ;
 ; Algorithms:       None.
@@ -31,10 +33,12 @@
 ;
 ; Revision History:
 ;    11/19/15  David Qu	               initial revision
+;    11/21/15  David Qu                added comments, more testing options.
 
 ; local include files
 $INCLUDE(genMacro.inc)
 $INCLUDE(handler.inc)
+$INCLUDE(hw7main.inc)
 
 
 CGROUP  GROUP   CODE
@@ -43,7 +47,7 @@ DGROUP  GROUP   DATA, STACK
 CODE    SEGMENT PUBLIC 'CODE'
 
 
-        ASSUME  CS:CGROUP, DS:DGROUP, SS:DGROUP, ES:NOTHING
+        ASSUME  CS:CGROUP, DS:DGROUP, ES:NOTHING
 
 
 ; external function declarations
@@ -53,14 +57,16 @@ CODE    SEGMENT PUBLIC 'CODE'
         EXTRN   HandleSerial:NEAR           ;Serial handler function.
         EXTRN   InitSerialChip:NEAR         ;Initialize serial chip registers.
 		EXTRN 	InitSerialVars:NEAR         ;Initialize serial shared variables.
-		EXTRN   SerialIOTest:NEAR              ;Tests serial behavior.
+		EXTRN   SerialIOTest:NEAR           ;Tests serial behavior.
+        EXTRN   SetSerialBaudRate:NEAR      ;Sets the baud rate.
+        EXTRN   ToggleParity:NEAR           ;Toggles the parity setting.
 
 START:  
 
 MAIN:
         MOV     AX, DGROUP              ;initialize the stack pointer
         MOV     SS, AX
-        MOV     SP, OFFSET(TopOfStack)
+        MOV     SP, OFFSET(DGROUP:TopOfStack)
 
         MOV     AX, DGROUP              ;initialize the data segment
         MOV     DS, AX
@@ -76,23 +82,35 @@ MAIN:
                                         ;   ALWAYS install handlers before
                                         ;   allowing the hardware to interrupt.
 
-		CALL 	InitSerialChip          ;initialize the serial chip registers.
 		
         CALL    InitSerialVars          ;initialize the serial shared variables
+		CALL 	InitSerialChip          ;initialize the serial chip registers
+        
+        ; Test parity setting
+MainTestParity:
+        MOV     BX, TOGGLE_PARITY_NUM   ; Toggle parity TOGGLE_PARITY_NUM
+        CALL    ToggleParity            ; times.
+        DEC     BX
+        JNZ     MainTestParity
+        ;JZ     MainTestBaudRate
+        
+MainTestBaudRate:        
+        MOV     BX, TEST_BAUD_RATE      ;Test set baud rate.
+        CALL    SetSerialBaudRate
+        
         STI                             ;and finally allow interrupts.
 
 		CALL 	SerialIOTest	        ;run serial test routine. This should never
                                         ;return.
-
+        
         RET                             ;Exit program.
 
 CODE    ENDS
 
 
 ; the data segment 
-; (required for C compatibility).
 DATA    SEGMENT PUBLIC  'DATA'
-
+        ;nothing in the data segment but need it for initializaing DS.
 DATA    ENDS
 
 

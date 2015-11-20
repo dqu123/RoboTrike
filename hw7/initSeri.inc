@@ -11,20 +11,21 @@
 ;
 ; Revision History:
 ;	 11/19/15  David Qu			initial revision
+;    11/21/15  David Qu         updated constants
 
 ; Addresses of registers
 SERIAL_BASE         EQU     100H            ; Base address for serial chip
 RECIEVER_BUFFER     EQU     SERIAL_BASE + 0 ; Receiver Buffer Register
-TRANSMITTER_BUFFER  EQU     SERIAL_BASE + 1 ; Transmitter Holding Register
-INT_ENABLE_REG      EQU     SERIAL_BASE + 2 ; Interrupt Enable Register
-INT_IDENT_REG       EQU     SERIAL_BASE + 3 ; Interupt Ident. Register
-LINE_CTRL_REG       EQU     SERIAL_BASE + 4 ; Line Control Register
-MODEM_CTRL_REG      EQU     SERIAL_BASE + 5 ; Modem Control Register
-LINE_STATUS_REG     EQU     SERIAL_BASE + 6 ; Line Status Register
-MODEM_STATUS_REG    EQU     SERIAL_BASE + 7 ; Modem Status Register
-SCRATCH_REG         EQU     SERIAL_BASE + 8 ; Scratch Register
-DIVISOR_LATCH       EQU     SERIAL_BASE + 9 ; Divisor Latch (LSB)
-LATCH_MSB           EQU     SERIAL_BASE + 10; Latch (MSB)
+TRANSMITTER_BUFFER  EQU     SERIAL_BASE + 0 ; Transmitter Holding Register
+INT_ENABLE_REG      EQU     SERIAL_BASE + 1 ; Interrupt Enable Register
+INT_IDENT_REG       EQU     SERIAL_BASE + 2 ; Interupt Ident. Register
+LINE_CTRL_REG       EQU     SERIAL_BASE + 3 ; Line Control Register
+MODEM_CTRL_REG      EQU     SERIAL_BASE + 4 ; Modem Control Register
+LINE_STATUS_REG     EQU     SERIAL_BASE + 5 ; Line Status Register
+MODEM_STATUS_REG    EQU     SERIAL_BASE + 6 ; Modem Status Register
+SCRATCH_REG         EQU     SERIAL_BASE + 7 ; Scratch Register
+DIVISOR_LATCH       EQU     SERIAL_BASE + 0 ; Divisor Latch (LSB)
+LATCH_MSB           EQU     SERIAL_BASE + 1 ; Latch (MSB)
 
 ; Register values
 ; Interrupt Enable Register (IER) values
@@ -43,7 +44,6 @@ DISABLE_RLS_INT     EQU     NOT ENABLE_RLS_INT ; disables RLS interrupts when
 ENABLE_MODEM_INT    EQU     00001000b ; ----1--- enables modem status interrupt
 DISABLE_MODEM_INT   EQU     NOT ENABLE_MODEM_INT ; disables modem interrupts
                                                  ; when AND-ed with the IER.
-
 ENABLE_SERIAL_INT   EQU     00001111b ; Enables all interrupts
                                       ; 0000---- Unused (always zero)
                                       ; ----1--- Enable Modem Status Interrupt
@@ -61,6 +61,7 @@ DISABLE_SERIAL_INT  EQU     00000000b ; Disables all interrupts.
                                       ; -------0 Disable Received Data Available
                                       ;          Interrupt
 
+
 ; Interupt Ident. Register values (Shows type of interrupt).
 NONE_INTERRUPT      EQU    001b    ; No interrupt.
 LINE_STATUS_INT     EQU    110b    ; Line status interrupt
@@ -70,19 +71,19 @@ MODEM_STATUS_INT    EQU    000b    ; Modem status interrupt.
 
 
 ; Divisor Latch (Baud rate)
-INIT_BAUD_RATE      EQU     600    ; Default baud rate.
-INIT_BAUD_DIVISOR   EQU     192    ; = BAUD_CLOCK_FACTOR / INIT_BAUD_RATE
+INIT_BAUD_RATE      EQU     9600   ; Default baud rate.
+INIT_BAUD_DIVISOR   EQU     60     ; = BAUD_CLOCK_FACTOR / INIT_BAUD_RATE
                                    ; See Table 7 on page 22 of the TL 16C450
                                    ; manual for more details on this relation.  
-BAUD_CLOCK_FACTOR   EQU     115200 ; BAUD_CLOCK_FACTOR is determined by
+BAUD_CLOCK_FACTOR   EQU     576000 ; BAUD_CLOCK_FACTOR is determined by
                                    ; the clock frequency. In this case, we
-                                   ; are using a 1.8432 MHz crystal. We divide
+                                   ; are using a 9.216 MHz crystal. We divide
                                    ; this rate by 16 because the serial produces
-                                   ; a 16 * clock. i.e. 115200 = 1,843,200 / 16
+                                   ; a 16 * clock. i.e. 1152000 = 18,432,000 / 16
                                    ; However this is more than 16 bits, so we
                                    ; need to split into top word and bottom word.
-BAUD_CLOCK_TOP_WORD EQU     1      ; 115200 = 65536 + 49664, so we have to break
-BAUD_CLOCK_BOT_WORD EQU     49664  ; this into two words.
+BAUD_CLOCK_TOP_WORD EQU     00008H ; 576000 = 08CA00H, so we have to break
+BAUD_CLOCK_BOT_WORD EQU     0CA00H ; this into two words.
 
 
 ; Line Control Register (LCR)
@@ -104,6 +105,7 @@ EVEN_PARITY         EQU     00011000b ; even parity value
 ODD_PARITY          EQU     00001000b ; odd parity value
 EVEN_STICK_PARITY   EQU     00111000b ; even stick parity value
 ODD_STICK_PARITY    EQU     00101000b ; odd stick parity value           
+NUM_PARITY_OPTIONS  EQU     5         ; Number of valid parity options.
 
 LCR_BREAK_MASK      EQU     01000000b ; mask for LCR break bit.                                               
 LCR_BREAK           EQU     01000000b ; -1------ Sets the break control bit.
@@ -117,11 +119,11 @@ ENABLE_DIVISOR_LATCH EQU    10000000b ; 1------- Enables the divisor latch.
 NO_DIVISOR_LATCH    EQU     00000000b ; Disables the divisor latch
 
                                                      
-INIT_LCR            EQU     01111011b ; Default line control register value.
+INIT_LCR            EQU     00000011b ; Default line control register value.
                                       ; ------11 8 bit words
                                       ; -----0-- no extra stop bit
-                                      ; --111--- even parity with stick
-                                      ; -1------ LCR break bit set.
+                                      ; --000--- no parity
+                                      ; -0------ LCR break bit set.
                                       ; 0------- Disable divisor latch.
                                       
 ; Line Status Register (LSR)
@@ -132,6 +134,7 @@ FRAMING_ERROR_BIT   EQU     00001000b ; bit for framing error
 BREAK_INT_BIT       EQU     00010000b ; bit for break interrupt
 THRE_BIT            EQU     00100000b ; bit for transmitter holding register
 TEMT_BIT            EQU     01000000b ; bit for transmitter empty
+                                      ; 0------- last bit in LSR is always zero.
 
 ; Modem Status Register (MSR)
 DCTS_BIT            EQU     00000001b ; bit for delta clear to send
