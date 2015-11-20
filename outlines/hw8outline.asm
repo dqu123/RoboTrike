@@ -17,7 +17,13 @@
 ;
 ; Local functions:
 ; GetParserToken      - returns the token class and token value for the passed char.
-; SetCommand
+; SetCommand          - sets the command shared variable.
+; AddDigit            - updates the value shared variable based on the next digit.
+; SetSign             - sets the sign shared variable.
+; DoCommand           - does a command based on the command, value, and sign
+;                       shared variables.
+; DoNOP               - does nothing.
+; EnqueueError        - enqueues an error to the event queue.
 ; 
 ; 
 ; Read only tables:
@@ -37,7 +43,7 @@
 ;
 ; Inputs 
 ;   Characters   Input Class    Value
-;      0-9          digit       0 - 9    (next digit in value)
+;      0 - 9        digit       0 - 9    (next digit in value)
 ;     + and -       sign        +1, -1   (sign of value)
 ;     S and s       command       0      (sets absolute speed)
 ;     V and v       command       2      (sets relative speed)
@@ -48,7 +54,7 @@
 ;     O and o       simpleCmd     12     (turns laser off)
 ;     <Return>      endCmd        0      (this is the ASCII decimal 13 or CR that
 ;                                         signals the end of a command).
-;    all others     other         character
+;    all others     other         character (original character value for debugging)
 ;
 ; Note that simpleCmds don't take in any arguments. This distinction is made
 ; so that regular commands require an argment and will enqueue an error event
@@ -57,18 +63,18 @@
 ;
 ; 
 ; Outputs/Actions
-;   Actions       Description
-;   setCommand    sets which command to use
-;   addDigit      increases the value shared variable
-;   setSign       sets the sign shared variable
-;   doCommand     perform command
-;   reset         reset shared variables 
-;   NOP           do nothing
-;   error         enqueue serial error event and reset
+;   Actions       Description                           Implementing function
+;   setCommand    sets which command to use             SetCommand()
+;   addDigit      increases the value shared variable   AddDigit()
+;   setSign       sets the sign shared variable         SetSign()
+;   doCommand     perform command                       DoCommand()
+;   reset         reset shared variables                InitParser()
+;   NOP           do nothing                            DoNOP()
+;   error         set return shared var to PARSER_ERROR SetError()
 ;       
 ; States
 ;   State         Description
-;   Initial       initial/default state
+;   InitialState  initial/default state
 ;   ReadCmd       just read command with arguments
 ;   ReadSimpleCmd just read command without arguments
 ;   SignState     just read sign
@@ -78,37 +84,50 @@
 ; State Transition Table
 ;                                   Current Input
 ;   Current State     digit       sign       command      simpleCmd       endCmd     other   
-;   Initial         ResetState  ResetState   ReadCmd     ReadSimpleCmd ResetState  ResetState
-;                     error       error      setCommand   setCommand      error      error
-;   ReadCmd         DigitState  SignState    ResetState  ResetState    ResetState  ResetState
-;                    addDigit    setSign       error       error          error      error
-;   ReadSimpleCmd   ResetState  ResetState   ResetState  ResetState    ResetState  ResetState
-;                     error       error        error       error        doCommand    error
-;   SignState       DigitState  ResetState   ResetState  ResetState    ResetState  ResetState
-;                    addDigit     error        error       error          error      error
-;   DigitState      DigitState  ResetState   ResetState  ResetState    ResetState  ResetState
-;                    addDigit     error        error       error        doCommand    error
-;   ResetState      ResetState  ResetState   Initial     Initial       ResetState  ResetState
-;                      NOP        NOP          reset       reset           NOP       NOP
+;   InitialState    ResetState  ResetState   ReadCmd      ReadSimpleCmd ResetState  ResetState
+;                     error       error      setCommand    setCommand      error      error
+;   ReadCmd         DigitState  SignState    ResetState   ResetState    ResetState  ResetState
+;                    addDigit    setSign       error        error          error      error
+;   ReadSimpleCmd   ResetState  ResetState   ResetState   ResetState    ResetState  ResetState
+;                     error       error        error        error        doCommand    error
+;   SignState       DigitState  ResetState   ResetState   ResetState    ResetState  ResetState
+;                    addDigit     error        error        error          error      error
+;   DigitState      DigitState  ResetState   ResetState   ResetState    ResetState  ResetState
+;                    addDigit     error        error        error        doCommand    error
+;   ResetState      ResetState  ResetState   InitialState InitialState  ResetState  ResetState
+;                      NOP        NOP          reset        reset           NOP       NOP
 ;
 ; Note this design uses the ResetState for both reseting out of errors and
 ; reseting from a completed command. This is because in both cases, you stay
 ; at ResetState until you read. Because this is a Mealy FSM, the error function
 ; is called as part of the bad transitions that lead to ResetState. The
-; doCommand is called as part of the valid transition from digit state to 
-; ResetState or ReadSimpleCmd to ResetState.
-  
+; DoCommand is called as part of the valid transition from digit state to 
+; ResetState or ReadSimpleCmd to ResetState. 
+
+; Return values for ParseSerialChar (PSC)
+PARSER_GOOD         EQU     0       ; Return value for a good call to PSC.
+PARSER_ERROR        EQU     1       ; Return value for a bad call to PSC.
+
+; Token constants:
+
+
+; State constants:
+INITIAL_STATE       EQU     0       ; Value for initial state
+READ_CMD            EQU     1       ; Value for a serial error event.
+READ_SIMPLE_CMD     EQU     2       ; Value for a serial data event.  
+
 ; Shared variables.
 DATA    SEGMENT PUBLIC  'DATA'
     command         DB  ?   ; index of command to use.
     value           DW  ?   ; value used by transitions
     sign            DB  ?   ; sign of value
+    return          DB  ?   ; return value for ParseSerialChar.
     
 DATA    ENDS
 
 ; InitParser()
 ; 
-; Description:       Initializes        
+; Description:       Initializes the command        
 ; Operation:         
 ;
 ; Arguments:         None.
