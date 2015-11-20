@@ -152,4 +152,27 @@ $NOLIST
     OUT     DX, AX
 )
 
+; INSTALL_HANDLER
+;
+; Description:       Installs the passed function at the passed vector address
+;                    in the IVT with the passed segment.
+;
+; Operation:         Moves OFFSET(function) and SEGMENT(function) into the the appropriate
+;                    address in the IVT.
+;
+; Arguments:         vector_addr - start of byte address in vector table to install
+;                                  handler
+;                    vector_offset - address in IVT to store the offset of the
+;                                  function
+;                    function    - name of function to install
+;
+; Registers Changed: flags, AX, ES.
+%*DEFINE(INSTALL_HANDLER(vector_addr, vector_offset, function))   (
+        XOR     AX, AX
+        MOV     ES, AX
+                                ;store the vector
+        MOV     ES: WORD PTR (%vector_addr), OFFSET(%function)
+        MOV     ES: WORD PTR (%vector_offset), SEG(%function)
+)
+
 $LIST 
