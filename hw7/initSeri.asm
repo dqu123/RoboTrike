@@ -22,12 +22,12 @@
 
 ; local include files
 $INCLUDE(genMacro.inc)
+$INCLUDE(initSeri.inc)
 
 CGROUP	GROUP	CODE 
-DGROUP  GROUP   DATA
 
 CODE 	SEGMENT PUBLIC 'CODE'
-		ASSUME 	CS:CGROUP, DS:DGROUP
+		ASSUME 	CS:CGROUP
 
 ; InitSerialChip()
 ; 
@@ -75,7 +75,7 @@ InitSerialChip  PROC     NEAR
                                         ; and other parameters of the chip.
         
         MOV     AX, INIT_BAUD_DIVISOR   ; Initialize the serial divsor registers
-        CALL    SetSerialDivisor()      ; to the INIT_BAUD_DIVISOR specified
+        CALL    SetSerialDivisor      ; to the INIT_BAUD_DIVISOR specified
                                         ; in initSeri.inc. This determines
                                         ; the sending rate.
         
@@ -124,8 +124,10 @@ SetSerialDivisor  PROC     NEAR
 
         PUSH    AX  ; Save divisor argument.
         
-        IN      AL, LINE_CTRL_REG           ; Read current LCR value and
-        OR      AL, ENABLE_DIVISOR_LATCH    ; set the DLAB.
+        
+        MOV     DX, LINE_CTRL_REG           ; Read current LCR value and
+        IN      AL, DX                      ; set the DLAB.
+        OR      AL, ENABLE_DIVISOR_LATCH    
         
         %CRITICAL_START           ; Entering critical code because
                                   ; we don't want to be interrupted while
@@ -141,8 +143,8 @@ SetSerialDivisor  PROC     NEAR
                                   ; of the baud rate.
         
         MOV     DX, LATCH_MSB     ; Write high byte of divisor to  
-        OUT     DX, AH            ; the LATCH_MSB to finish writing the
-                                  ; baud rate.
+        MOV     AL, AH            ; the LATCH_MSB to finish writing the    
+        OUT     DX, AL            ; baud rate. 
         
         %CRITICAL_END             ; End of critical code.
         
