@@ -71,7 +71,7 @@ MODEM_STATUS_INT    EQU    000b    ; Modem status interrupt.
 
 ; Divisor Latch (Baud rate)
 INIT_BAUD_RATE      EQU     600    ; Default baud rate.
-INIT_BAUD_DIVISOR   EQU     192    ; = BAUD_CLOCK_FACTOR / INIT_BAUD_RATE
+INIT_BAUD_DIVISOR   EQU     1920   ; = BAUD_CLOCK_FACTOR / INIT_BAUD_RATE
                                    ; See Table 7 on page 22 of the TL 16C450
                                    ; manual for more details on this relation.  
 BAUD_CLOCK_FACTOR   EQU     1152000; BAUD_CLOCK_FACTOR is determined by

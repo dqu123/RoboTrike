@@ -76,14 +76,18 @@ MAIN:
                                         ;   ALWAYS install handlers before
                                         ;   allowing the hardware to interrupt.
 
-		CALL 	InitSerialChip          ;initialize the serial chip registers.
 		
         CALL    InitSerialVars          ;initialize the serial shared variables
+       
+
+		CALL 	InitSerialChip          ;initialize the serial chip registers
         STI                             ;and finally allow interrupts.
 
 		CALL 	SerialIOTest	        ;run serial test routine. This should never
                                         ;return.
-
+InfiniteLoop:
+        JMP     InfiniteLoop
+        
         RET                             ;Exit program.
 
 CODE    ENDS

@@ -15,7 +15,6 @@
 ; and an event queue for each side of the link.
 ;
 ; Public functions:
-; InitSerialChip()        - initializes the serial chip.
 ; InitSerialVars()        - initializes serial shared variables.
 ; HandleSerial()          - handles serial interrupts.
 ; SerialPutChar(c)        - outputs a character to the serial channel.
@@ -140,7 +139,7 @@ InitSerialVars  PROC     NEAR
                                     
         MOV     SI, OFFSET(txQueue)       ; Set arguments to QueueInit:        
         MOV     AX, TX_QUEUE_LENGTH       ; a=txQueue, length=TX_QUEUE_LENGTH,
-        MOV     BL, TX_QUEUE_ELEMENT_SIZE ; size=TX_QUEUE_ELEMENT_SIZE.
+        MOV     BL, FALSE ; size=TX_QUEUE_ELEMENT_SIZE.
         CALL    QueueInit
         
         RET
@@ -207,7 +206,7 @@ HandelSerialSwitch:
                                        ; the numbers work out perfectly to
                                        ; just use as indices.
                                        
-        JMP    HandleSerialLoop
+        ;JMP    HandleSerialLoop
         
 EndHandleSerialLoop:
         
@@ -522,6 +521,9 @@ LoadTransmission:
                                           ; interrupt.
         
 SignalKickstart:
+        MOV     DX, TRANSMITTER_BUFFER
+        XOR     AL, AL
+        OUT     DX, AL
         MOV     kickstart, TRUE           ; Otherwise, signal that we will
         ;JMP    EndHandleEmptyTransmitter ; need to kickstart to reset the
                                           ; interrupt.
