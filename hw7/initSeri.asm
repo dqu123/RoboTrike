@@ -125,14 +125,12 @@ InitSerialChip  ENDP
 ; Limitations:       Assumes the peripheral chip select has been initialized
 ;                    properly.
 ;
-; Registers Changed: flags, BL, DX
+; Registers Changed: flags, BX, DX
 ; Special notes:     None.
 SetSerialDivisor  PROC     NEAR
                   PUBLIC   SetSerialDivisor
-                  
-        PUSH    AX  ; Save divisor argument.
         
-        
+        MOV		CX, AX						; Save a copy of the current argument.
         MOV     DX, LINE_CTRL_REG           ; Read current LCR value and
         IN      AL, DX                      ; set the DLAB.
         MOV     BL, AL                      ; Save a copy of the current LCR val.
@@ -145,8 +143,8 @@ SetSerialDivisor  PROC     NEAR
                                   
         OUT     DX, AL            ; Divisor latch is now enabled.
         
-        POP     AX                ; Restore divisor argument.
         
+        MOV		AX, CX
         MOV     DX, DIVISOR_LATCH ; Write low byte of divisor to
         OUT     DX, AL            ; the DIVISOR_LATCH to update part
                                   ; of the baud rate.

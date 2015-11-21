@@ -49,6 +49,7 @@ $INCLUDE(initSeri.inc) ; General serial constants.
 $INCLUDE(queue.inc)    ; Queue struct.
 $INCLUDE(serial.inc)   ; RoboTrike serial protocol constants.
 $INCLUDE(events.inc)   ; Event types.
+$INCLUDE(eoi.inc)      ; EOIs for event handler.
  
 ; Transmission protocol:
 ; This code uses an event-driven approach to handle data transmission with
@@ -139,7 +140,7 @@ InitSerialVars  PROC     NEAR
                                     
         MOV     SI, OFFSET(txQueue)       ; Set arguments to QueueInit:        
         MOV     AX, TX_QUEUE_LENGTH       ; a=txQueue, length=TX_QUEUE_LENGTH,
-        MOV     BL, FALSE ; size=TX_QUEUE_ELEMENT_SIZE.
+        MOV     BL, FALSE 				  ; size=TX_QUEUE_ELEMENT_SIZE.
         CALL    QueueInit
         
         RET
@@ -209,8 +210,11 @@ HandelSerialSwitch:
         ;JMP    HandleSerialLoop
         
 EndHandleSerialLoop:
+        MOV     DX, INTCtrlrEOI ;send a non spec EOI (to clear out controller)
+        MOV     AX, NonSpecEOI
+        OUT     DX, AL
         
-        POPA        ; Restore interrupted code's registers.
+		POPA        ; Restore interrupted code's registers.
         IRET
 
 HandleSerial    ENDP
@@ -244,24 +248,12 @@ HandleSerial    ENDP
 ; Special notes:     None.
 SerialPutChar   PROC     NEAR
                 PUBLIC   SerialPutChar
-        
-        MOV     SI, OFFSET(txQueue) ; Check the txQueue
-        CALL    QueueFull           ; to see if it is full.
-        JZ      TxQueueFull
-        ;JNZ    TxQueueNotFull
-        
-TxQueueNotFull:
-        CALL    Enqueue             ; If it is not full, enqueue the char
-        CLC                         ; and reset the CF to show the caller that
-        JMP     CheckKickstart      ; the char was enqueued.
-        
-TxQueueFull:
-        STC                         ; If it is full, set the CF to show the
-        ;JMP    CheckKickstart      ; caller that the char was not enqueued.
-
+				
+		PUSH 	AX					; Save argument character.
+		
 CheckKickstart:
-        CMP     kickstart, FALSE    ; Check if kickstart is true.
-        JE      EndSerialPutChar    ; Done if kick start is false.
+        CMP     kickstart, FALSE    ; First Check if kickstart is true.
+        JE      CheckTxQueueFull 
         ;JNE    KickstartSerial
         
 KickstartSerial:
@@ -274,7 +266,25 @@ KickstartSerial:
         
         OR      AL, ENABLE_THRE_INT  ; Enable the THRE interrupt after
         OUT     DX, AL               ; disabling it to kickstart the serial.
-        ;JMP    EndSerialPutChar
+        ;JMP    CheckTxQueueFull
+
+CheckTxQueueFull:        
+        MOV     SI, OFFSET(txQueue) ; Check the txQueue
+        CALL    QueueFull           ; to see if it is full.
+        JZ      TxQueueFull
+        ;JNZ    TxQueueNotFull
+        
+TxQueueNotFull:
+		POP		AX					; Restore argument character.
+        CALL    Enqueue             ; If it is not full, enqueue the char
+        CLC                         ; and reset the CF to show the caller that
+        JMP     EndSerialPutChar    ; the char was enqueued.
+        
+TxQueueFull:
+        STC                         ; If it is full, set the CF to show the
+        ;JMP    EndSerialPutChar    ; caller that the char was not enqueued.
+
+
         
 EndSerialPutChar:
         
@@ -521,9 +531,6 @@ LoadTransmission:
                                           ; interrupt.
         
 SignalKickstart:
-        MOV     DX, TRANSMITTER_BUFFER
-        XOR     AL, AL
-        OUT     DX, AL
         MOV     kickstart, TRUE           ; Otherwise, signal that we will
         ;JMP    EndHandleEmptyTransmitter ; need to kickstart to reset the
                                           ; interrupt.

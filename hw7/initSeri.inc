@@ -43,7 +43,6 @@ DISABLE_RLS_INT     EQU     NOT ENABLE_RLS_INT ; disables RLS interrupts when
 ENABLE_MODEM_INT    EQU     00001000b ; ----1--- enables modem status interrupt
 DISABLE_MODEM_INT   EQU     NOT ENABLE_MODEM_INT ; disables modem interrupts
                                                  ; when AND-ed with the IER.
-
 ENABLE_SERIAL_INT   EQU     00001111b ; Enables all interrupts
                                       ; 0000---- Unused (always zero)
                                       ; ----1--- Enable Modem Status Interrupt
@@ -61,6 +60,7 @@ DISABLE_SERIAL_INT  EQU     00000000b ; Disables all interrupts.
                                       ; -------0 Disable Received Data Available
                                       ;          Interrupt
 
+
 ; Interupt Ident. Register values (Shows type of interrupt).
 NONE_INTERRUPT      EQU    001b    ; No interrupt.
 LINE_STATUS_INT     EQU    110b    ; Line status interrupt
@@ -70,19 +70,19 @@ MODEM_STATUS_INT    EQU    000b    ; Modem status interrupt.
 
 
 ; Divisor Latch (Baud rate)
-INIT_BAUD_RATE      EQU     600    ; Default baud rate.
-INIT_BAUD_DIVISOR   EQU     1920   ; = BAUD_CLOCK_FACTOR / INIT_BAUD_RATE
+INIT_BAUD_RATE      EQU     9600   ; Default baud rate.
+INIT_BAUD_DIVISOR   EQU     60     ; = BAUD_CLOCK_FACTOR / INIT_BAUD_RATE
                                    ; See Table 7 on page 22 of the TL 16C450
                                    ; manual for more details on this relation.  
-BAUD_CLOCK_FACTOR   EQU     1152000; BAUD_CLOCK_FACTOR is determined by
+BAUD_CLOCK_FACTOR   EQU     576000 ; BAUD_CLOCK_FACTOR is determined by
                                    ; the clock frequency. In this case, we
-                                   ; are using a 18.432 MHz crystal. We divide
+                                   ; are using a 9.216 MHz crystal. We divide
                                    ; this rate by 16 because the serial produces
                                    ; a 16 * clock. i.e. 1152000 = 18,432,000 / 16
                                    ; However this is more than 16 bits, so we
                                    ; need to split into top word and bottom word.
-BAUD_CLOCK_TOP_WORD EQU     00011H ; 1152000 = 119400H, so we have to break
-BAUD_CLOCK_BOT_WORD EQU     09400H ; this into two words.
+BAUD_CLOCK_TOP_WORD EQU     00008H ; 576000 = 08CA00H, so we have to break
+BAUD_CLOCK_BOT_WORD EQU     0CA00H ; this into two words.
 
 
 ; Line Control Register (LCR)
@@ -117,11 +117,11 @@ ENABLE_DIVISOR_LATCH EQU    10000000b ; 1------- Enables the divisor latch.
 NO_DIVISOR_LATCH    EQU     00000000b ; Disables the divisor latch
 
                                                      
-INIT_LCR            EQU     01000011b ; Default line control register value.
+INIT_LCR            EQU     00000011b ; Default line control register value.
                                       ; ------11 8 bit words
                                       ; -----0-- no extra stop bit
                                       ; --000--- no parity
-                                      ; -1------ LCR break bit set.
+                                      ; -0------ LCR break bit set.
                                       ; 0------- Disable divisor latch.
                                       
 ; Line Status Register (LSR)
