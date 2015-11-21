@@ -16,3 +16,4 @@
 KEYPRESS_EVENT      EQU     0       ; Value for a keypress event. 
 SERIAL_ERROR_EVENT  EQU     1       ; Value for a serial error event.
 SERIAL_DATA_EVENT   EQU     2       ; Value for a serial data event.
+SERIAL_SENT_EVENT   EQU     3       ; Value for a serial sent char event.

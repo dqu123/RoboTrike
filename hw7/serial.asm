@@ -269,6 +269,7 @@ KickstartSerial:
         ;JMP    CheckTxQueueFull
 
 CheckTxQueueFull:        
+		
         MOV     SI, OFFSET(txQueue) ; Check the txQueue
         CALL    QueueFull           ; to see if it is full.
         JZ      TxQueueFull
@@ -281,6 +282,7 @@ TxQueueNotFull:
         JMP     EndSerialPutChar    ; the char was enqueued.
         
 TxQueueFull:
+		;POP		AX					; Restore argument character.
         STC                         ; If it is full, set the CF to show the
         ;JMP    EndSerialPutChar    ; caller that the char was not enqueued.
 
@@ -526,9 +528,12 @@ HandleEmptyTransmitter     PROC     NEAR
 LoadTransmission:
         CALL    Dequeue                   ; If txQueue is not empty,
         MOV     DX, TRANSMITTER_BUFFER    ; dequeue, and move the
-        OUT     DX, AL                    ; next character into the serial
-        JMP     EndHandleEmptyTransmitter ; transmitter. This resets the
-                                          ; interrupt.
+        OUT     DX, AL                    ; next character into the serial transmitter.
+        
+		MOV     AH, SERIAL_SENT_EVENT 	  ; Encode the event type SERIAL_DATA_EVENT.
+        CALL    EnqueueEvent          	  ; Enqueue the event.
+		
+		JMP     EndHandleEmptyTransmitter
         
 SignalKickstart:
         MOV     kickstart, TRUE           ; Otherwise, signal that we will
