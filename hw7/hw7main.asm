@@ -53,7 +53,7 @@ CODE    SEGMENT PUBLIC 'CODE'
         EXTRN   HandleSerial:NEAR           ;Serial handler function.
         EXTRN   InitSerialChip:NEAR         ;Initialize serial chip registers.
 		EXTRN 	InitSerialVars:NEAR         ;Initialize serial shared variables.
-		EXTRN   SerialIOTest:NEAR              ;Tests serial behavior.
+		EXTRN   SerialIOTest:NEAR           ;Tests serial behavior.
 
 START:  
 

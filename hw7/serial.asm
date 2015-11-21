@@ -249,11 +249,20 @@ HandleSerial    ENDP
 SerialPutChar   PROC     NEAR
                 PUBLIC   SerialPutChar
 				
-		PUSH 	AX					; Save argument character.
+        
+CheckTxQueueFull:        	
+        MOV     SI, OFFSET(txQueue) ; Check the txQueue
+        CALL    QueueFull           ; to see if it is full.
+        JZ      TxQueueFull
+        ;JNZ    TxQueueNotFull
+        
+TxQueueNotFull:
+        CALL    Enqueue             ; If it is not full, enqueue the char
+        ;JMP    CheckKickStart      ; and check the kickstart. 
 		
 CheckKickstart:
-        CMP     kickstart, FALSE    ; First Check if kickstart is true.
-        JE      CheckTxQueueFull 
+        CMP     kickstart, FALSE    ; First check if need to kickstart.
+        JE      SPCClearCF           
         ;JNE    KickstartSerial
         
 KickstartSerial:
@@ -266,23 +275,14 @@ KickstartSerial:
         
         OR      AL, ENABLE_THRE_INT  ; Enable the THRE interrupt after
         OUT     DX, AL               ; disabling it to kickstart the serial.
-        ;JMP    CheckTxQueueFull
+        ;JMP    SPCClearCF
 
-CheckTxQueueFull:        
-		
-        MOV     SI, OFFSET(txQueue) ; Check the txQueue
-        CALL    QueueFull           ; to see if it is full.
-        JZ      TxQueueFull
-        ;JNZ    TxQueueNotFull
-        
-TxQueueNotFull:
-		POP		AX					; Restore argument character.
-        CALL    Enqueue             ; If it is not full, enqueue the char
-        CLC                         ; and reset the CF to show the caller that
-        JMP     EndSerialPutChar    ; the char was enqueued.
+SPCClearCF:
+        CLC                         ; reset the CF to show the caller that
+                                    ; the char was enqueued.
+        JMP     EndSerialPutChar
         
 TxQueueFull:
-		;POP		AX					; Restore argument character.
         STC                         ; If it is full, set the CF to show the
         ;JMP    EndSerialPutChar    ; caller that the char was not enqueued.
 
@@ -529,9 +529,6 @@ LoadTransmission:
         CALL    Dequeue                   ; If txQueue is not empty,
         MOV     DX, TRANSMITTER_BUFFER    ; dequeue, and move the
         OUT     DX, AL                    ; next character into the serial transmitter.
-        
-		MOV     AH, SERIAL_SENT_EVENT 	  ; Encode the event type SERIAL_DATA_EVENT.
-        CALL    EnqueueEvent          	  ; Enqueue the event.
 		
 		JMP     EndHandleEmptyTransmitter
         
