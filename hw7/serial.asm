@@ -91,10 +91,10 @@ CODE 	SEGMENT PUBLIC 'CODE'
         
 ; Read-only tables
 HandleSerialTable LABEL   WORD
-        DW      OFFSET(HandleModem)             ; Table of functions for
-        DW      OFFSET(HandleEmptyTransmitter)  ; the switch statement in 
-        DW      OFFSET(HandleSerialData)        ; HandleSerial()
-        DW      OFFSET(HandleSerialError)
+        DW      HandleModem             ; Table of functions for
+        DW      HandleEmptyTransmitter  ; the switch statement in 
+        DW      HandleSerialData        ; HandleSerial()
+        DW      HandleSerialError
         
 SerialErrorTable  LABEL   BYTE
         DB      OVERRUN_BIT           ; Table of LSR bits that correspond to
@@ -199,11 +199,13 @@ HandleSerialLoop:
         ;JNE   HandelSerialSwitch
 
 HandelSerialSwitch:
-        XOR    AH, AH                  ; Otherwise, convert the interrupt
-        SHR    AL, SWITCH_TABLE_SHIFT  ; value which is conveniently a multiple
+        XOR    AH, AH                  ; Otherwise, use the interrupt
+                                       ; value which is conveniently a multiple
         MOV    BX, AX                  ; of two into an index in the HandleSerialTable
         CALL   HandleSerialTable[BX]   ; which contains a function to call
-                                       ; in each case.
+                                       ; in each case (this is word table so
+                                       ; the numbers work out perfectly to
+                                       ; just use as indices.
                                        
         JMP    HandleSerialLoop
         

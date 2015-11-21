@@ -23,6 +23,8 @@
 ; local include files
 $INCLUDE(genMacro.inc)
 $INCLUDE(initSeri.inc)
+$INCLUDE(handler.inc)
+$INCLUDE(eoi.inc)
 
 CGROUP	GROUP	CODE 
 
@@ -74,8 +76,8 @@ InitSerialChip  PROC     NEAR
                                         ; settings, break conditions, word size, 
                                         ; and other parameters of the chip.
         
-        MOV     AX, INIT_BAUD_DIVISOR   ; Initialize the serial divsor registers
-        CALL    SetSerialDivisor      ; to the INIT_BAUD_DIVISOR specified
+        MOV     AX, INIT_BAUD_DIVISOR   ; Initialize the serial divisor registers
+        CALL    SetSerialDivisor        ; to the INIT_BAUD_DIVISOR specified
                                         ; in initSeri.inc. This determines
                                         ; the sending rate.
         
@@ -83,7 +85,13 @@ InitSerialChip  PROC     NEAR
         MOV     AL, ENABLE_SERIAL_INT   ; enable all interrupts so
         OUT     DX, AL                  ; event handlers will be called.
         
+        MOV     DX, INT2Ctrl            ; initialize interrupt controller
+        MOV     AX, INT2CtrlVal         ; for INT 2.
+        OUT     DX, AX
         
+        MOV     DX, INTCtrlrEOI ;send a non spec EOI (to clear out controller)
+        MOV     AX, NonSpecEOI
+        OUT     DX, AL
 
         RET
 
@@ -117,17 +125,18 @@ InitSerialChip  ENDP
 ; Limitations:       Assumes the peripheral chip select has been initialized
 ;                    properly.
 ;
-; Registers Changed: flags, DX
+; Registers Changed: flags, BL, DX
 ; Special notes:     None.
 SetSerialDivisor  PROC     NEAR
                   PUBLIC   SetSerialDivisor
-
+                  
         PUSH    AX  ; Save divisor argument.
         
         
         MOV     DX, LINE_CTRL_REG           ; Read current LCR value and
         IN      AL, DX                      ; set the DLAB.
-        OR      AL, ENABLE_DIVISOR_LATCH    
+        MOV     BL, AL                      ; Save a copy of the current LCR val.
+        OR      AL, ENABLE_DIVISOR_LATCH    ; value to restore.
         
         %CRITICAL_START           ; Entering critical code because
                                   ; we don't want to be interrupted while
@@ -145,6 +154,10 @@ SetSerialDivisor  PROC     NEAR
         MOV     DX, LATCH_MSB     ; Write high byte of divisor to  
         MOV     AL, AH            ; the LATCH_MSB to finish writing the    
         OUT     DX, AL            ; baud rate. 
+        
+        MOV     DX, LINE_CTRL_REG ; Restore the original LCR value.
+        MOV     AL, BL
+        OUT     DX, AL
         
         %CRITICAL_END             ; End of critical code.
         

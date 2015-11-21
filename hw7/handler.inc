@@ -1,6 +1,3 @@
-$NOLIST
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;                                                                            ;
 ;                                 handler.INC                                ;
@@ -17,16 +14,41 @@ $NOLIST
 ; Revision History
 ;    11/19/15  David Qu            initial revision
 
+; Control Register Addresses
+PeriphBase  EQU     0FF00H            ;address of peripheral control block
+Tmr0Ctrl    EQU     PeriphBase + 056H ;address of Timer 0 Control Register
+Tmr0MaxCntA EQU     PeriphBase + 052H ;address of Timer 0 Max Count A Register
+Tmr0Count   EQU     PeriphBase + 050H ;address of Timer 0 Count Register
+INT2Ctrl    EQU		PeriphBase + 03CH ;address of INT2 Input.
+
+; Control Register Values
+Tmr0CtrlVal     EQU     0E001H          ;value to write to Timer 0 Control Register
+                                        ;1---------------  enable timer
+                                        ;-1--------------  write to control
+                                        ;--1-------------  enable interrupts
+                                        ;----000000------  reserved
+                                        ;---0------0-----  read only
+                                        ;-----------0----  TMRIN0 is an enable
+                                        ;------------00--  count CPU clocks
+                                        ;--------------0-  single counter mode
+                                        ;---------------1  continuous mode
+                                        
+INT2CtrlVal     EQU     00011H          ;00000000000----- unused 
+                                        ;-----------1---- level triggering
+                                        ;------------0--- enable interrupt
+                                        ;-------------001 priority
+                                       
+; IVT Constants
 IVT_POINTER_SIZE    EQU         2     ; 2 bytes per address / segment value.
 
-; Interrupt addresses
+; IVT Interrupt addresses
 INT_14              EQU         0038H       ; word address to store INT 14
                                             ; event handler function offset.
 INT_14_SEGMENT      EQU         INT_14 + 2  ; word address to store INT 14
                                             ; event handler function segment.
 
 
-
+$NOLIST
 ; INSTALL_HANDLER
 ;
 ; Description:       Installs the passed function at the passed vector address
