@@ -141,7 +141,9 @@ InitSerialVars  PROC     NEAR
         MOV     SI, OFFSET(txQueue)       ; Set arguments to QueueInit:        
         MOV     AX, TX_QUEUE_LENGTH       ; a=txQueue, length=TX_QUEUE_LENGTH,
         MOV     BL, FALSE 				  ; size=TX_QUEUE_ELEMENT_SIZE.
-        CALL    QueueInit
+        CALL    QueueInit                 ; Note that TX_QUEUE_LENGTH should
+                                          ; be less than the queue array size,
+                                          ; and is ignored.
         
         RET
 
@@ -207,7 +209,7 @@ HandelSerialSwitch:
                                        ; the numbers work out perfectly to
                                        ; just use as indices).
                                        
-        JMP    HandleSerialLoop
+        JMP    HandleSerialLoop        ; Repeat until NONE_INTERRUPT.
         
 EndHandleSerialLoop:
         MOV     DX, INTCtrlrEOI ;send an INT 2 EOI (to clear out controller)

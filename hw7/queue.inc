@@ -18,7 +18,7 @@
 BYTES_PER_WORD  EQU     2           ; Number of bytes per word.
 WORD_SHIFT_AMT  EQU     1           ; Factor to shift by to convert from number
                                     ; of words to number of bytes.
-ARRAY_SIZE		EQU		512 		; Maximum size of queue in bytes, reserving 
+ARRAY_SIZE		EQU		1024 		; Maximum size of queue in bytes, reserving 
                                     ; 1 element size (byte or word) for a blank
 									; space. Note that this number must be a
 									; power of 2 because several mod operations
