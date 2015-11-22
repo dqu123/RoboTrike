@@ -15,7 +15,9 @@
 ;                   Serial Capture Program is needed to view the output from
 ;                   the serial chip. The string "EE/CS 51 -- the quick brown
 ;                   fox jumped over the lazy block dog\r\n" is output 100 times
-;                   numbered from 0 to 99.
+;                   numbered from 0 to 99. The user can test the SetSerialBaudRate
+;                   and ToggleParity functions by changing the constants defined
+;                   in hw7main.inc.
 ;
 ; Input:            Serial Input.
 ; Output:           Serial Output.
@@ -31,6 +33,7 @@
 ;
 ; Revision History:
 ;    11/19/15  David Qu	               initial revision
+;    11/21/15  David Qu                added comments, more testing options.
 
 ; local include files
 $INCLUDE(genMacro.inc)

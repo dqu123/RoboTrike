@@ -19,6 +19,7 @@
 ; HandleSerial()          - handles serial interrupts.
 ; SerialPutChar(c)        - outputs a character to the serial channel.
 ; SetSerialBaudRate(rate) - sets the baud rate of the serial channel.
+; ToggleParity()          - toggles the parity setting of the serial.
 ;
 ; Local functions:
 ; HandleSerialError()      - handles a serial error interrupt.
