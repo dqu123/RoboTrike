@@ -105,7 +105,7 @@ EVEN_PARITY         EQU     00011000b ; even parity value
 ODD_PARITY          EQU     00001000b ; odd parity value
 EVEN_STICK_PARITY   EQU     00111000b ; even stick parity value
 ODD_STICK_PARITY    EQU     00101000b ; odd stick parity value           
-NUM_PARITY_OPTIONS  EQU     5
+NUM_PARITY_OPTIONS  EQU     5         ; Number of valid parity options.
 
 LCR_BREAK_MASK      EQU     01000000b ; mask for LCR break bit.                                               
 LCR_BREAK           EQU     01000000b ; -1------ Sets the break control bit.

@@ -130,7 +130,7 @@ InitSerialChip  ENDP
 ; Limitations:       Assumes the peripheral chip select has been initialized
 ;                    properly.
 ;
-; Registers Changed: flags, BX, DX
+; Registers Changed: flags, AX, BX, CX, DX.
 ; Special notes:     None.
 SetSerialDivisor  PROC     NEAR
                   PUBLIC   SetSerialDivisor
@@ -196,7 +196,7 @@ SetSerialDivisor  ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, AL, DX.
 ; Special notes:     None.
 SetLineCtrlReg  PROC     NEAR
                 PUBLIC   SetLineCtrlReg
@@ -242,7 +242,7 @@ SetLineCtrlReg  ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, AX, DX.
 ; Special notes:     None.
 SetParity       PROC     NEAR
                 PUBLIC   SetParity

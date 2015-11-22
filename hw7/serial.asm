@@ -113,10 +113,10 @@ ParityTable       LABEL   BYTE
 ; InitSerialVars()
 ; 
 ; Description:       Initializes serial shared variables. Initializes
-;                    kickstart = FALSE, and the txQueue using the queue functions.
-; Operation:         Sets baudDivisor = INIT_BAUD_DIVISOR, 
-;                    lineCtrlReg = INIT_LCR, and calls QueueInit() to initialize
-;                    the transmission queue.
+;                    kickstart = FALSE, parity = INIT_PARITY_INDEX and the 
+;                    txQueue using the queue functions.
+; Operation:         Sets kickstart = FALSE, parity = INIT_PARITY_INDEX, 
+;                    and calls QueueInit() to initialize the transmission queue.
 ;
 ; Arguments:         None.
 ; Return Value:      None.
@@ -201,7 +201,7 @@ InitSerialVars  ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: None.
+; Registers Changed: None (event handler).
 ; Special notes:     None.
 HandleSerial    PROC     NEAR
                 PUBLIC   HandleSerial
@@ -274,8 +274,10 @@ HandleSerial    ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
-; Special notes:     None.
+; Registers Changed: flags, SI, AX, DX.
+; Special notes:     This function contains critical code from the accessing
+;                    the txQueue and the kickstart shared variable that
+;                    the event handler also interacts with.
 SerialPutChar   PROC     NEAR
                 PUBLIC   SerialPutChar
 				
@@ -360,7 +362,7 @@ SerialPutChar   ENDP
 ; Known Bugs:        None.
 ; Limitations:       Baud rate must not be 0.
 ;
-; Registers Changed: flags, AX, BX, DX
+; Registers Changed: flags, AX, BX, DX.
 ; Special notes:     None.
 SetSerialBaudRate   PROC     NEAR
                     PUBLIC   SetSerialBaudRate
@@ -381,14 +383,15 @@ SetSerialBaudRate   ENDP
 ;                    EVEN_PARITY, ODD_PARITY, EVEN_STICK_PARITY, and
 ;                    ODD_STICK_PARITY (and back to NO_PARITY).
 ;                    
-; Operation:         Update the parity value MOD NUM_PARITY_OPTIONS.
-;                       
+; Operation:         Increment the parity value MOD NUM_PARITY_OPTIONS.
+;                    Then, change the parity setting using the SetParity function
+;                    defined in the initSeri module.
 ;
 ; Arguments:         None.
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
-; Shared Variables:  parity - index of parity setting in parity table.
+; Shared Variables:  Read/write to parity - index of parity setting in parity table.
 ; Global Variables:  None.
 ;
 ; Input:             Reads from the line control register in the serial chip.
@@ -402,7 +405,7 @@ SetSerialBaudRate   ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, AX, BX.
 ; Special notes:     None.
 ToggleParity    PROC     NEAR
                 PUBLIC   ToggleParity
@@ -454,7 +457,7 @@ ToggleParity       ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, AX, BX, CL, DX.
 ; Special notes:     None.
 HandleSerialError     PROC     NEAR
 
@@ -522,7 +525,7 @@ HandleSerialError     ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, SI, AL, DX.
 ; Special notes:     None.
 HandleEmptyTransmitter     PROC     NEAR
         
@@ -578,7 +581,7 @@ HandleEmptyTransmitter     ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, AX, DX.
 ; Special notes:     None.
 HandleSerialData     PROC     NEAR
 
@@ -620,7 +623,7 @@ HandleSerialData     ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: None.
+; Registers Changed: flags, AL, DX.
 ; Special notes:     None.
 HandleModem     PROC     NEAR
         

@@ -8,8 +8,8 @@
 
 ; This file contains general definitions and macroes for setting up event
 ; handlers to particular interrupt types. The macros included are:
-;    INSTALL_HANDLER - install a certain function as a handler to a particular
-;                      IVT entry.
+;    INSTALL_HANDLER(vector_addr, vector_offset, function) - install a certain 
+;           function as a handler to a particular IVT entry.
 ;
 ; Revision History
 ;    11/19/15  David Qu            initial revision
