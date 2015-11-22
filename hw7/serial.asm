@@ -441,7 +441,7 @@ ToggleParity       ENDP
 ; Shared Variables:  Writes to the eventQueue - which contains system events.
 ; Global Variables:  None.
 ;
-; Input:             None.
+; Input:             Serial Chip - reads from the LSR to determine the errors.
 ; Output:            None.
 ;
 ; Error Handling:    None.
@@ -509,7 +509,8 @@ HandleSerialError     ENDP
 ; Global Variables:  None.
 ;
 ; Input:             None.
-; Output:            None.
+; Output:            Serial Chip - writes to the TRANSMITTER_BUFFER to send
+;                                  data.
 ;
 ; Error Handling:    None.
 ;
@@ -564,7 +565,7 @@ HandleEmptyTransmitter     ENDP
 ; Shared Variables:  Writes to the eventQueue - which contains system events.
 ; Global Variables:  None.
 ;
-; Input:             None.
+; Input:             Serial Chip - reads from the RECEIVER_BUFFER.
 ; Output:            None.
 ;
 ; Error Handling:    None.
@@ -607,7 +608,7 @@ HandleSerialData     ENDP
 ; Shared Variables:  None.
 ; Global Variables:  None.
 ;
-; Input:             None.
+; Input:             Serial Chip - reads from the MSR to determine modem status.
 ; Output:            None.
 ;
 ; Error Handling:    None.
