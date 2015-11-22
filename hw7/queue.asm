@@ -24,6 +24,7 @@
 ;                               QueueEmpty to avoid trampling register.
 ;                               Updated code to be more modular in terms
 ;                               of BYTES_PER_WORD.
+;       11/21/15  David Qu      Added critical code macro for serial.
 
 ; local include files
 $INCLUDE(QUEUE.INC)
@@ -47,49 +48,48 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ; 	empty and ready to accept values. If the zero flag is set, then an error 
 ; 	occurred (passed length was too large). 
 ;	
-; Operation: First set both head and tail to 0. These represent the index offset 
-;   (in bytes) of the queue head and tail relative to the queue array. Then, 
-; 	check if the element size (BL) is true (non-zero). If BL is true, set 
-;   e_size = BYTES_PER_WORD, otherwise set e_size = 1. Check to make 
-;   sure length (AX) * e_size < ARRAY_SIZE. If not, there is not enough 
-;   array space (we leave one blank to determine if the queue is full, so we use
-;   < instead of <=), and we return with the zero flag set. If there is space, 
-;  	then we reset the zero flag to signal that initialization was sucessful. 
+; Operation:         First set both head and tail to 0. These represent the index offset 
+;                    (in bytes) of the queue head and tail relative to the queue array. Then, 
+; 	                 check if the element size (BL) is true (non-zero). If BL is true, set 
+;                    e_size = BYTES_PER_WORD, otherwise set e_size = 1. Check to make 
+;                    sure length (AX) * e_size < ARRAY_SIZE. If not, there is not enough 
+;                    array space (we leave one blank to determine if the queue is full, so we use
+;                    < instead of <=), and we return with the zero flag set. If there is space, 
+;  	                 then we reset the zero flag to signal that initialization was sucessful. 
 ;
-; Arguments: 		a (DS:SI)	- address where queue will be initialized
-; 					length (AX) - maximum length of the queue (ignored if <
-;                                 ARRAY_SIZE, otherwise the zero flag is set).
-;                 	size (BL)   - boolean representing element size. Is non-zero
+; Arguments: 		 a (DS:SI)	 - address where queue will be initialized
+; 					 length (AX) - maximum length of the queue (ignored if <
+;                                  ARRAY_SIZE, otherwise the zero flag is set).
+;                 	 size (BL)   - boolean representing element size. Is non-zero
 ;                                 if the elements are words, otherwise is zero 
 ;                                 if the elements are bytes. (Only words and 
 ;                                 bytes are allowed).                                            
-; Return Value:		Zero flag is set iff there is an error. Otherwise the queue
-; 					is initialized and the zero flag is reset.
+; Return Value:		 Zero flag is set iff there is an error. Otherwise the queue
+; 					 is initialized and the zero flag is reset.
 ;
-; Local Variables: 	temp (AX) 	- temporary variable for instructions requiring
+; Local Variables: 	 temp (AX) 	- temporary variable for instructions requiring
 ;								  a register. Also used to convert length to
 ;                                 bytes.
-; Shared Variables: None.
-; Global Variables: None.
+; Shared Variables:  None.
+; Global Variables:  None.
 ;
-; Input:			None.
-; Output:			None.
+; Input:			 None.
+; Output:			 None.
 ;
-; Error Handling:	If the length >= ARRAY_SIZE, the zero flag is set, and 
-; 					the queue is not initialized.
+; Error Handling:	 If the length >= ARRAY_SIZE, the zero flag is set, and 
+; 					 the queue is not initialized.
 ;
-; Algorithms:		None.
-; Data Structures:	queueSTRUC structure. See QUEUE.INC for details.
+; Algorithms:		 None.
+; Data Structures:	 queueSTRUC structure. See QUEUE.INC for details.
 ;
-; Known Bugs:		None.
-; Limitations:		Can only hold up to ARRAY_SIZE - 1 bytes.
-;                   Assumes DS:SI is a valid pointer to a queueSTRUC.
+; Known Bugs:		 None.
+; Limitations:		 Can only hold up to ARRAY_SIZE - 1 bytes.
+;                    Assumes DS:SI is a valid pointer to a queueSTRUC.
 ;
-; Registers Used:	flags, AX, BL, SI.
-; Stack Depth:		0 words.
+; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/23/15
+; Last Modified: 11/21/15
 
 QueueInit		PROC 		NEAR
 				PUBLIC		QueueInit
@@ -138,35 +138,34 @@ QueueInit		ENDP
 
 ; QueueEmpty
 ; 
-; Description: Checks if the queue at DS:SI is empty. If it is, return with
-; 	the zero flag set. Otherwise, return with the zero flag reset. 
+; Description:       Checks if the queue at DS:SI is empty. If it is, return with
+; 	                 the zero flag set. Otherwise, return with the zero flag reset. 
 ;
-; Operation: Compares head and tail for equality and return.
+; Operation:         Compares head and tail for equality and return.
 ;
-; Arguments:		address (DS:SI) - address of the queue.
-; Return Value:		Zero flag is set iff the queue is empty.
+; Arguments:		 address (DS:SI) - address of the queue.
+; Return Value:		 Zero flag is set iff the queue is empty.
 ;
-; Local Variables:	head (AX) - head index in bytes.
-; Shared Variables:	None.
-; Global Variables:	None.
+; Local Variables:	 head (AX) - head index in bytes.
+; Shared Variables:	 None.
+; Global Variables:	 None.
 ;
-; Input:			None.
-; Output:			None.
+; Input:			 None.
+; Output:			 None.
 ;
-; Error Handling:	None.
+; Error Handling:	 None.
 ;
-; Algorithms:		head == tail implies that the queue empty.
-; Data Structures:	queueSTRUC structure. See QUEUE.INC for details.	
+; Algorithms:		 head == tail implies that the queue empty.
+; Data Structures:	 queueSTRUC structure. See QUEUE.INC for details.	
 ;
-; Known Bugs:		None.
-; Limitations:		Assumes DS:SI is a valid pointer to a queueSTRUC, and that
-;					QueueInit has been called on the queueSTRUC.
+; Known Bugs:		 None.
+; Limitations:		 Assumes DS:SI is a valid pointer to a queueSTRUC, and that
+;					 QueueInit has been called on the queueSTRUC.
 ;
-; Registers Used:	flags, AX, SI.
-; Stack Depth:		0 words.
+; Registers Changed: flags.
 ; 
 ; Author: David Qu
-; Last Modified: 10/23/15
+; Last Modified: 11/21/15
 
 QueueEmpty		PROC		NEAR
 				PUBLIC		QueueEmpty
@@ -174,11 +173,9 @@ QueueEmpty		PROC		NEAR
         
         PUSH    AX                  ; Save AX for caller.
 		
-        ;CRITICAL_START
         MOV		AX, [SI].head		; Move to AX to do two dereferences.
 		CMP		AX, [SI].tail		; Compare head and tail and set
 									; flags appropriately.
-        ;CRITICAL_END
         
         POP     AX                  ; Restore AX.
         
@@ -191,40 +188,39 @@ QueueEmpty		ENDP
 
 ; QueueFull
 ; 
-; Description: Checks if the queue at DS:SI is full. If it is, return with the
-; 	zero flag set. Otherwise returns with the zero flag reset.
+; Description:       Checks if the queue at DS:SI is full. If it is, return with 
+;                    the zero flag set. Otherwise returns with the zero flag reset.
 ;
-; Operation: First, compute tail + e_size mod ARRAY_SIZE. 
-; 	Then compare this to head (zero flag will be set appropriately).
+; Operation:         First, compute tail + e_size mod ARRAY_SIZE. 
+; 	                 Then compare this to head (zero flag will be set appropriately).
 ;
-; Arguments:		address (DS:SI) - address of the queue.
-; Return Value:		Zero flag is set iff the queue is full.
+; Arguments:		 address (DS:SI) - address of the queue.
+; Return Value:		 Zero flag is set iff the queue is full.
 ;
-; Local Variables:	index (AX) - used to compute tail + 1 mod ARRAY_SIZE.
-; Shared Variables:	None.
-; Global Variables:	None.
+; Local Variables:	 index (AX) - used to compute tail + 1 mod ARRAY_SIZE.
+; Shared Variables:	 None.
+; Global Variables:	 None.
 ;
-; Input:			None.
-; Output:			None.
+; Input:			 None.
+; Output:			 None.
 ;
-; Error Handling:	None.
+; Error Handling:	 None.
 ;
-; Algorithms:		Addition mod powers of 2 via AND (2^n - 1) to handle the
-;					circular aspect of the queue. One element space will be 
-;					reserved to determine if the queue is full. Thus we add 
-;					e_size to tail mod ARRAY_SIZE and compare to head to 
-;                   see if the queue is full.
-; Data Structures:	queueSTRUC structure. See QUEUE.INC for details.
+; Algorithms:		 Addition mod powers of 2 via AND (2^n - 1) to handle the
+;					 circular aspect of the queue. One element space will be 
+;					 reserved to determine if the queue is full. Thus we add 
+;					 e_size to tail mod ARRAY_SIZE and compare to head to 
+;                    see if the queue is full.
+; Data Structures:	 queueSTRUC structure. See QUEUE.INC for details.
 ;
-; Known Bugs:		None.
-; Limitations:		Assumes DS:SI is a valid pointer to a queueSTRUC, and that
-;					QueueInit has been called on the queueSTRUC.
+; Known Bugs:		 None.
+; Limitations:		 Assumes DS:SI is a valid pointer to a queueSTRUC, and that
+;					 QueueInit has been called on the queueSTRUC.
 ;
-; Registers Used:	flags, AX, SI.
-; Stack Depth:
+; Registers Changed: flags, AX.
 ; 
 ; Author: David Qu
-; Last Modified: 10/23/15
+; Last Modified: 11/21/15
 
 QueueFull		PROC		NEAR
 				PUBLIC		QueueFull
@@ -253,42 +249,42 @@ QueueFull		ENDP
 
 ; Dequeue
 ; 
-; Description: Removes either a one byte value or two byte value (depending on
-; 	e_size) from the head of the queue at the passed address DS:SI, and
-; 	returns it in AL or AX. This is a blocking function, and will block if the
-;	queue is empty.
+; Description:       Removes either a one byte value or two byte value (depending 
+;                    on e_size) from the head of the queue at the passed address 
+;                    DS:SI, and returns it in AL or AX. This is a blocking function, 
+;                    and will block if the queue is empty.
 ;
-; Operation: First, block if the queue is empty. Otherwise, read from 
-;   array[head] into AX if e_size != 1, and into AL if e_size = 1. Result
-; 	will be in AX if it is a word queue and AL if it is a byte queue.
+; Operation:         First, block if the queue is empty. Otherwise, read from 
+;                    array[head] into AX if e_size != 1, and into AL 
+;                    if e_size = 1. Result will be in AX if it is a word queue 
+;                    and AL if it is a byte queue.
 ;
-; Arguments:		address (DS:SI) - address of the queue.
-; Return Value:		If e_size != 1, returns in AX. 
-; 					If e_size == 1, returns in AL.
+; Arguments:		 address (DS:SI) - address of the queue.
+; Return Value:		 If e_size != 1, returns in AX. 
+; 					 If e_size == 1, returns in AL.
 ;
-; Local Variables:	value (AL/AX) - read value to return.
-;					head (BX)	  - head index in bytes.
-; Shared Variables:	None.
-; Global Variables:	None.
+; Local Variables:	 value (AL/AX) - read value to return.
+;					 head (BX)	  - head index in bytes.
+; Shared Variables:	 None.
+; Global Variables:	 None.
 ;
-; Input:			None.
-; Output:			None.
+; Input:			 None.
+; Output:			 None.
 ;
-; Error Handling:	None.
+; Error Handling:	 None.
 ;
-; Algorithms:		head = head + e_size mod ARRAY_SIZE since 
-; 					it points to the next available value in the queue.
-; Data Structures:	queueSTRUC structure. See QUEUE.INC for details.
+; Algorithms:		 head = head + e_size mod ARRAY_SIZE since 
+; 					 it points to the next available value in the queue.
+; Data Structures:	 queueSTRUC structure. See QUEUE.INC for details.
 ;
-; Known Bugs:		None.
-; Limitations:		Assumes DS:SI is a valid pointer to a queueSTRUC, and that
-;					QueueInit has been called on the queueSTRUC.
+; Known Bugs:		 None.
+; Limitations:		 Assumes DS:SI is a valid pointer to a queueSTRUC, and that
+;					 QueueInit has been called on the queueSTRUC.
 ;
-; Registers Used:	flags, AX, BX, SI.
-; Stack Depth:		0 words.
+; Registers Changed: AX, BX, SI.
 ; 
 ; Author: David Qu
-; Last Modified: 10/23/15
+; Last Modified: 11/21/15
 
 Dequeue			PROC		NEAR
 				PUBLIC		Dequeue
@@ -331,41 +327,43 @@ Dequeue			ENDP
 
 ; Enqueue
 ; 
-; Description: Adds the passed byte or word value to the tail of the queue
-; 	at the passed address DS:SI. This is a blocking function that waits if the
-;	queue is full. It does not return until the value is added to the queue.
+; Description:       Adds the passed byte or word value to the tail of the queue
+; 	                 at the passed address DS:SI. This is a blocking function 
+;                    that waits if the queue is full. It does not return until 
+;                    the value is added to the queue.
 ;
-; Operation: First, block if the queue is full. If not, add a word value if
-;	e_size != 1, or add a byte value if e_size == 1 to the address specified 
-;   by array[tail]. Then increment tail mod ARRAY_SIZE to update the queue.
+; Operation:         First, block if the queue is full. If not, add a word value 
+;                    if e_size != 1, or add a byte value if e_size == 1 to the 
+;                    address specified by array[tail]. Then increment tail mod 
+;                    ARRAY_SIZE to update the queue.
 ;
-; Arguments:		address (DS:SI) - address of the queue.
-;					value (AX)		- value to enqueue. Size is determined by
+; Arguments:		 address (DS:SI) - address of the queue.
+;					 value (AX)		- value to enqueue. Size is determined by
 ;									  e_size.
-; Return Value:		Zero flag is set iff the queue is empty.
+; Return Value:		 Zero flag is set iff the queue is empty.
 ;
-; Local Variables:	tail (BX)		- tail index in bytes.
-; Shared Variables:	None.
-; Global Variables:	None.
+; Local Variables:	 tail (BX)		- tail index in bytes.
+; Shared Variables:	 None.
+; Global Variables:	 None.
 ;
-; Input:			None.
-; Output:			None.
+; Input:			 None.
+; Output:			 None.
 ;
-; Error Handling:	None.
+; Error Handling:	 None.
 ;
-; Algorithms:		tail = tail + 1 mod ARRAY_SIZE since tail points to the
-;                   next available position in the array.
-; Data Structures:	queueSTRUC structure. See QUEUE.INC for details.
+; Algorithms:		 tail = tail + 1 mod ARRAY_SIZE since tail points to the
+;                    next available position in the array.
+; Data Structures:	 queueSTRUC structure. See QUEUE.INC for details.
 ;
-; Known Bugs:		None.
-; Limitations:		Assumes DS:SI is a valid pointer to a queueSTRUC, and that
-;					QueueInit has been called on the queueSTRUC.
+; Known Bugs:		 None.
+; Limitations:		 Assumes DS:SI is a valid pointer to a queueSTRUC, and that
+;					 QueueInit has been called on the queueSTRUC.
 ;
-; Registers Used:	flags, AX, BX, SI.
-; Stack Depth:		0 words.
+; Registers Changed: AX, BX, SI.
+; Stack Depth:		 0 words.
 ; 
 ; Author: David Qu
-; Last Modified: 10/23/15
+; Last Modified: 11/21/15
 
 Enqueue			PROC		NEAR
 				PUBLIC		Enqueue

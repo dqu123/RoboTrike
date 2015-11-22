@@ -210,7 +210,7 @@ HandelSerialSwitch:
         ;JMP    HandleSerialLoop
         
 EndHandleSerialLoop:
-        MOV     DX, INTCtrlrEOI ;send a non spec EOI (to clear out controller)
+        MOV     DX, INTCtrlrEOI ;send an INT 2 EOI (to clear out controller)
         MOV     AX, INT2EOI
         OUT     DX, AL
         
@@ -261,7 +261,7 @@ TxQueueNotFull:
         ;JMP    CheckKickStart      ; and check the kickstart. 
 		
 CheckKickstart:
-        CMP     kickstart, FALSE    ; First check if need to kickstart.
+        CMP     kickstart, FALSE    ; Check if need to kickstart.
         JE      SPCClearCF           
         ;JNE    KickstartSerial
         
