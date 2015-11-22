@@ -7,12 +7,14 @@
 ;                                 EE/CS 51                                     ;
 ;                                                                              ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-; This file contains the general purpose initialization function for the 
-; TL16C450 Serial Chip.
+; This file contains the general purpose initialization function and other
+; setter functions for the TL16C450 Serial Chip.
 ;
 ; Public functions:
 ; InitSerialChip()          - initializes the serial chip.
 ; SetSerialDivisor(divisor) - sets the divisor latch on the serial
+; SetLineCtrlReg(value)     - sets the value of the Line Control Register manually
+;                             letting the programmer control all options. 
 ;
 ; Local functions:
 ; None.
@@ -53,9 +55,10 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ; Shared Variables:  None.
 ; Global Variables:  None.
 ;
-; Input:             None.
-; Output:            None.
-;
+; Input:             Serial chip - reads LCR value to preserve it before
+;                                  writing the divisor bits.
+; Output:            Serial chip - writes to various registers set up the chip. 
+;                                  See the TL16C450 data sheet for details.
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
@@ -113,8 +116,9 @@ InitSerialChip  ENDP
 ; Shared Variables:  None.
 ; Global Variables:  None.
 ;
-; Input:             None.
-; Output:            None.
+; Input:             Serial chip - read from LCR to preserve it.
+; Output:            Serial chip - writes to LCR to access and set divisor. 
+;                                  See the TL16C450 data sheet for details.
 ;
 ; Error Handling:    None.
 ;
@@ -164,5 +168,46 @@ SetSerialDivisor  PROC     NEAR
 
 SetSerialDivisor  ENDP
 
+; SetLineCtrlReg(value)
+; 
+; Description:       Writes the passed value in AL to the line control register.
+;                    This function gives fine control over the LCR, which sets
+;                    the serial character size, extra stop bits, parity,
+;                    break
+; Operation:         Outs the passed value in AL to the line control register.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   output (DX) - output address.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            Serial chip - writes to LCR.
+;                                  See the TL16C450 data sheet for details.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+SetLineCtrlReg  PROC     NEAR
+                PUBLIC   SetLineCtrlReg
+        
+        MOV     DX, LINE_CTRL_REG   ; Output the value in AL
+        OUT     DX, AL              ; to the LCR.
+        
+        RET
+
+SetLineCtrlReg  ENDP
+
+
 CODE    ENDS
+
         END

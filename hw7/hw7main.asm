@@ -11,16 +11,16 @@
 ; Description:      This program tests the serial functions for Homework #7.  
 ;                   First, it initializes the chip select, serial IO registers,
 ;                   and serial shared variables. Then it calls the SerialIOTest
-;                   function to test the keypad. This procedure runs each
-;                   test case and then waits for a keypress before moving on 
-;                   to the next test case. The test case number is displayed
-;                   on the LED display.
+;                   function to test the serial. A program such as RealTerm:
+;                   Serial Capture Program is needed to view the output from
+;                   the serial chip. The string "EE/CS 51 -- the quick brown
+;                   fox jumped over the lazy block dog\r\n" is output 100 times
+;                   numbered from 0 to 99.
 ;
 ; Input:            Serial Input.
-; Output:           Display.
+; Output:           Serial Output.
 ;
 ; User Interface:   None.
-;
 ; Error Handling:   None.
 ;
 ; Algorithms:       None.
@@ -35,6 +35,7 @@
 ; local include files
 $INCLUDE(genMacro.inc)
 $INCLUDE(handler.inc)
+$INCLUDE(hw7main.inc)
 
 
 CGROUP  GROUP   CODE
@@ -54,6 +55,7 @@ CODE    SEGMENT PUBLIC 'CODE'
         EXTRN   InitSerialChip:NEAR         ;Initialize serial chip registers.
 		EXTRN 	InitSerialVars:NEAR         ;Initialize serial shared variables.
 		EXTRN   SerialIOTest:NEAR           ;Tests serial behavior.
+        EXTRN   SetSerialBaudRate:NEAR      ;Sets the baud rate.
 
 START:  
 
@@ -78,9 +80,11 @@ MAIN:
 
 		
         CALL    InitSerialVars          ;initialize the serial shared variables
-       
-
 		CALL 	InitSerialChip          ;initialize the serial chip registers
+        
+        MOV     BX, TEST_BAUD_RATE      ;Test set baud rate.
+        CALL    SetSerialBaudRate
+        
         STI                             ;and finally allow interrupts.
 
 		CALL 	SerialIOTest	        ;run serial test routine. This should never

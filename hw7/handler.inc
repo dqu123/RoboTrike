@@ -9,10 +9,12 @@
 ; This file contains general definitions and macroes for setting up event
 ; handlers to particular interrupt types. The macros included are:
 ;    INSTALL_HANDLER - install a certain function as a handler to a particular
-;
+;                      IVT entry.
 ;
 ; Revision History
 ;    11/19/15  David Qu            initial revision
+;    11/20/15  David Qu            changed some initial values.
+;    11/21/15  David Qu            updated comments.
 
 ; Control Register Addresses
 PeriphBase  EQU     0FF00H            ;address of peripheral control block

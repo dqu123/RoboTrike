@@ -20,10 +20,7 @@
 ; SerialPutChar(c)        - outputs a character to the serial channel.
 ; SetSerialBaudRate(rate) - sets the baud rate of the serial channel.
 ; SetParity(parity)       - sets the parity configuration of the channel.
-; SetLineCtrlReg(value)   - sets the value of the Line Control Register manually
-;                           letting the programmer control all options. This
-;                           makes the API robust, without including too many
-;                           functions.
+
 ;
 ; Local functions:
 ; HandleSerialError()      - handles a serial error interrupt.
@@ -41,6 +38,8 @@
 ;
 ; Revision History:
 ; 		11/19/15  David Qu		initial revision.
+;       11/20/15  David Qu      fixed bugs.
+;       11/21/15  David Qu      added comments.
 
 ;local include files. 
 $INCLUDE(genMacro.inc) ; General purpose macroes (CRITICAL_START, CRITICAL_END)
@@ -93,8 +92,8 @@ CODE 	SEGMENT PUBLIC 'CODE'
 HandleSerialTable LABEL   WORD
         DW      HandleModem             ; Table of functions for
         DW      HandleEmptyTransmitter  ; the switch statement in 
-        DW      HandleSerialData        ; HandleSerial()
-        DW      HandleSerialError
+        DW      HandleSerialData        ; HandleSerial(). These functions handle
+        DW      HandleSerialError       ; various interrupt cases.
         
 SerialErrorTable  LABEL   BYTE
         DB      OVERRUN_BIT           ; Table of LSR bits that correspond to
@@ -143,7 +142,8 @@ InitSerialVars  PROC     NEAR
         MOV     BL, FALSE 				  ; size=TX_QUEUE_ELEMENT_SIZE.
         CALL    QueueInit                 ; Note that TX_QUEUE_LENGTH should
                                           ; be less than the queue array size,
-                                          ; and is ignored.
+                                          ; and is ignored if less than the
+                                          ; queue max size.
         
         RET
 
@@ -174,7 +174,9 @@ InitSerialVars  ENDP
 ;
 ; Input:             Serial chip - causes interrupts and has the value of the
 ;                                  current interrupt in the IIR.
-; Output:            None.
+; Output:            Serial chip - writes to various registers to handle
+;                                  interrupts. See the TL16C450 data sheet for
+;                                  details.
 ;
 ; Error Handling:    None.
 ;
@@ -242,11 +244,12 @@ HandleSerial    ENDP
 ; Return Value:      Resets the carry flag iff the character has been output.
 ;
 ; Local Variables:   None.
-; Shared Variables:  None.
+; Shared Variables:  Read/writes kickstart - boolean that determines kickstarting.
 ; Global Variables:  None.
 ;
-; Input:             None.
-; Output:            None.
+; Input:             Serial chip - read from IER to perserve its value.
+; Output:            Serial chip - writes to IER to kickstart. 
+;                                  See the TL16C450 data sheet for details.
 ;
 ; Error Handling:    None.
 ;
@@ -315,9 +318,13 @@ SerialPutChar   ENDP
 ; SetSerialBaudRate(rate)
 ; 
 ; Description:       Sets the baud divisor in the serial chip using the
-;                    SetSerialDivisor function.
+;                    SetSerialDivisor function after calculating the divisor
+;                    value using division. Truncates the divisor to the nearest
+;                    integer. Note that the baud rate must not be 0, or there
+;                    will be a division error.
 ; Operation:         Compute baud divisor = BAUD_CLOCK_FACTOR / rate.
-;                    then call SetSerialDivisor.
+;                    then call SetSerialDivisor to set the baud divisor on the
+;                    chip.
 ;
 ; Arguments:         rate (BX) - desired baud rate.
 ; Return Value:      None.
@@ -336,7 +343,7 @@ SerialPutChar   ENDP
 ; Data Structures:   None.    
 ;
 ; Known Bugs:        None.
-; Limitations:       None.
+; Limitations:       Baud rate must not be 0.
 ;
 ; Registers Changed: flags, AX, BX, DX
 ; Special notes:     None.
@@ -368,7 +375,7 @@ SetSerialBaudRate   ENDP
 ;                    remove the parity bits and add in the new parity bits. 
 ;                    Then output through AL.
 ;
-; Arguments:         parity (AH)
+; Arguments:         parity (AH).
 ; Return Value:      None.
 ;
 ; Local Variables:   lcr_value (AL) - value of the LCR before the change occurs.
@@ -403,47 +410,6 @@ SetParity       PROC     NEAR
 SetParity       ENDP
 
 
-
-; SetLineCtrlReg(value)
-; 
-; Description:       Writes the passed value in AL to the line control register.
-;                    This function gives fine control over the LCR, which sets
-;                    the serial character size, extra stop bits, parity,
-;                    break
-; Operation:         Outs the passed value in AL to the line control register.
-;
-; Arguments:         None.
-; Return Value:      None.
-;
-; Local Variables:   output (DX) - output address.
-; Shared Variables:  None.
-; Global Variables:  None.
-;
-; Input:             None.
-; Output:            None.
-;
-; Error Handling:    None.
-;
-; Algorithms:        None.
-; Data Structures:   None.    
-;
-; Known Bugs:        None.
-; Limitations:       None.
-;
-; Registers Changed: flags.
-; Special notes:     None.
-SetLineCtrlReg  PROC     NEAR
-                PUBLIC   SetLineCtrlReg
-        
-        MOV     DX, LINE_CTRL_REG   ; Output the value in AL
-        OUT     DX, AL              ; to the LCR.
-        
-        RET
-
-SetLineCtrlReg  ENDP
-
-
-
 ; HandleSerialError()
 ; 
 ; Description:       Handles a receiver line status interrupt, which corresponds
@@ -475,25 +441,27 @@ SetLineCtrlReg  ENDP
 ; Special notes:     None.
 HandleSerialError     PROC     NEAR
 
-        MOV     DX, LINE_STATUS_REG
-        IN      AL, DX
-        MOV     CL, AL
+        MOV     DX, LINE_STATUS_REG      ; Read in the LSR to determine
+        IN      AL, DX                   ; which errors occurred.
+        MOV     CL, AL                   ; Save a copy in CL to restore later.
 
 HandleSerialErrorLoopInit:       
-        MOV     BX, SIZE_ERROR_TABLE
+        MOV     BX, SIZE_ERROR_TABLE     ; Loop through all the possible errors
+                                         ; in the table.
         
 HandleSerialErrorLoop:
-        MOV     AL, SerialErrorTable[BX]
-        TEST    CL, AL 
-        JZ      CheckHSELoop
+        MOV     AL, SerialErrorTable[BX] ; For each error, check for the
+        AND     AL, CL                   ; corresponding error bit.
+        JZ      CheckHSELoop             
         ;JNZ    EnqueueErrorEvent
         
 EnqueueErrorEvent:
-        MOV     AH, SERIAL_ERROR_EVENT
-        CALL    EnqueueEvent
+        MOV     AH, SERIAL_ERROR_EVENT   ; Enqueue an error event for each
+        CALL    EnqueueEvent             ; error that contains the specific
+                                         ; error bit in AL.
  
 CheckHSELoop: 
-        DEC     BX
+        DEC     BX                       ; Loop through all possible errors.
         JNZ     HandleSerialErrorLoop
         ;JZ     EndHandelSerialError
         
