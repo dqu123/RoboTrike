@@ -90,7 +90,7 @@ InitSerialChip  PROC     NEAR
         OUT     DX, AX
         
         MOV     DX, INTCtrlrEOI ;send a non spec EOI (to clear out controller)
-        MOV     AX, NonSpecEOI
+        MOV     AX, INT2EOI
         OUT     DX, AL
 
         RET

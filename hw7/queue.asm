@@ -233,7 +233,8 @@ QueueFull		PROC		NEAR
         
 		PUSH    AX                      ; Save AX for caller.
         
-        ;CRITICAL_START
+        ;CLI
+        
         MOV		AX, [SI].tail			; Compute tail + e_size mod ARRAY_SIZE
 		ADD		AX, [SI].e_size			; using the AND bit trick, taking
 		AND		AX, ARRAY_SIZE - 1		; advantage of the fact that ARRAY_SIZE
@@ -241,7 +242,7 @@ QueueFull		PROC		NEAR
 										
 		CMP		AX, [SI].head			; tail + 1 mod ARRAY_SIZE == head iff
 										; the queue is full. 
-        ;CRITICAL_END
+        ;STI
 		
         POP     AX                      ; Restore AX.
 

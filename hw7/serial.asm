@@ -211,7 +211,7 @@ HandelSerialSwitch:
         
 EndHandleSerialLoop:
         MOV     DX, INTCtrlrEOI ;send a non spec EOI (to clear out controller)
-        MOV     AX, NonSpecEOI
+        MOV     AX, INT2EOI
         OUT     DX, AL
         
 		POPA        ; Restore interrupted code's registers.
@@ -526,8 +526,8 @@ HandleEmptyTransmitter     PROC     NEAR
         ;JNZ    LoadTransmission
         
 LoadTransmission:
-        CALL    Dequeue                   ; If txQueue is not empty,
-        MOV     DX, TRANSMITTER_BUFFER    ; dequeue, and move the
+        CALL    Dequeue                   ; If txQueue is not empty, dequeue
+        MOV     DX, TRANSMITTER_BUFFER    ; and move the
         OUT     DX, AL                    ; next character into the serial transmitter.
 		
 		JMP     EndHandleEmptyTransmitter

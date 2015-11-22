@@ -27,6 +27,7 @@
 
 ; local include files
 $INCLUDE(QUEUE.INC)
+$INCLUDE(genMacro.inc)
 
 CGROUP	GROUP	CODE 
 
@@ -169,14 +170,18 @@ QueueInit		ENDP
 
 QueueEmpty		PROC		NEAR
 				PUBLIC		QueueEmpty
-		
+        
+        
         PUSH    AX                  ; Save AX for caller.
 		
+        ;CRITICAL_START
         MOV		AX, [SI].head		; Move to AX to do two dereferences.
 		CMP		AX, [SI].tail		; Compare head and tail and set
 									; flags appropriately.
+        ;CRITICAL_END
         
         POP     AX                  ; Restore AX.
+        
         
 		RET
 		
@@ -223,9 +228,12 @@ QueueEmpty		ENDP
 
 QueueFull		PROC		NEAR
 				PUBLIC		QueueFull
-                
+        
+
+        
 		PUSH    AX                      ; Save AX for caller.
-		
+        
+        ;CRITICAL_START
         MOV		AX, [SI].tail			; Compute tail + e_size mod ARRAY_SIZE
 		ADD		AX, [SI].e_size			; using the AND bit trick, taking
 		AND		AX, ARRAY_SIZE - 1		; advantage of the fact that ARRAY_SIZE
@@ -233,8 +241,10 @@ QueueFull		PROC		NEAR
 										
 		CMP		AX, [SI].head			; tail + 1 mod ARRAY_SIZE == head iff
 										; the queue is full. 
+        ;CRITICAL_END
 		
         POP     AX                      ; Restore AX.
+
         
         RET
 		
@@ -283,7 +293,8 @@ QueueFull		ENDP
 
 Dequeue			PROC		NEAR
 				PUBLIC		Dequeue
- 
+        %CRITICAL_START
+        
 BlockDequeue:
 		CALL	QueueEmpty			; Check if queue is empty and block if
 		JZ		BlockDequeue		; it is. Can be interrupted into other
@@ -311,6 +322,8 @@ EndDequeue:
 		AND		BX, ARRAY_SIZE - 1 	; ARRAY_SIZE using the fact that ARRAY_SIZE
 		MOV		[SI].head, BX		; is a power of 2.
 
+        %CRITICAL_END
+        
 		RET
 		
 Dequeue			ENDP
@@ -357,7 +370,9 @@ Dequeue			ENDP
 
 Enqueue			PROC		NEAR
 				PUBLIC		Enqueue
-
+                
+        %CRITICAL_START
+        
 BlockEnqueue:
 		CALL	QueueFull			; Check if queue is full and block if 
 		JZ		BlockEnqueue		; it is. Can be interrupted into other
@@ -386,6 +401,8 @@ EndEnqueue:
 		AND		BX, ARRAY_SIZE - 1	; is a power of 2.
 		MOV		[SI].tail, BX		
 		
+        %CRITICAL_END
+        
 		RET
 Enqueue			ENDP
 

@@ -43,7 +43,7 @@ DGROUP  GROUP   DATA, STACK
 CODE    SEGMENT PUBLIC 'CODE'
 
 
-        ASSUME  CS:CGROUP, DS:DGROUP, SS:DGROUP, ES:NOTHING
+        ASSUME  CS:CGROUP, DS:DGROUP, ES:NOTHING
 
 
 ; external function declarations
@@ -60,7 +60,7 @@ START:
 MAIN:
         MOV     AX, DGROUP              ;initialize the stack pointer
         MOV     SS, AX
-        MOV     SP, OFFSET(TopOfStack)
+        MOV     SP, OFFSET(DGROUP:TopOfStack)
 
         MOV     AX, DGROUP              ;initialize the data segment
         MOV     DS, AX
@@ -94,9 +94,8 @@ CODE    ENDS
 
 
 ; the data segment 
-; (required for C compatibility).
 DATA    SEGMENT PUBLIC  'DATA'
-
+        ;nothing in the data segment but need it for initializaing DS.
 DATA    ENDS
 
 

@@ -23,7 +23,7 @@ SWITCH_TABLE_SHIFT    EQU     1   ; Amount to shift a valid interrupt (not
                                   ; of the fact that all the valid interrupts
                                   ; are multiples of 2s.
 
-TX_QUEUE_LENGTH       EQU     512 ; This is the maximum length of the txQueue.
+TX_QUEUE_LENGTH       EQU     0   ; This is the maximum length of the txQueue.
 TX_QUEUE_ELEMENT_SIZE EQU     1   ; byte sized elements for the txQueue since
                                   ; it holds characters.
 SIZE_ERROR_TABLE      EQU     4   ; Number of error bits in the LSR.

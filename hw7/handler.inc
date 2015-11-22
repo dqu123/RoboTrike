@@ -33,8 +33,8 @@ Tmr0CtrlVal     EQU     0E001H          ;value to write to Timer 0 Control Regis
                                         ;--------------0-  single counter mode
                                         ;---------------1  continuous mode
                                         
-INT2CtrlVal     EQU     00011H          ;00000000000----- unused 
-                                        ;-----------1---- level triggering
+INT2CtrlVal     EQU     00001H          ;00000000000----- unused 
+                                        ;-----------0---- edge triggering
                                         ;------------0--- enable interrupt
                                         ;-------------001 priority
                                        
