@@ -157,6 +157,8 @@ InitSerialVars  ENDP
 ;                    line status, received data available, transmitter holding
 ;                    register empty, and modem status interrupts. 
 ;                    Calls helper functions for each case using a switch table.
+;                    Note this should be installed as a INT 2 interupt handler
+;                    in the IVT.
 ; Operation:         First checks INT_IDENT_REG (IIR) for the interrupt type:
 ;                    Then calls HandleModem, HandleEmptyTransmitter, 
 ;                    HandleSerialData, or HandleSerialError depending on the case.                  
@@ -182,7 +184,7 @@ InitSerialVars  ENDP
 ;
 ; Algorithms:        None.
 ; Data Structures:   txQueue, eventQueue to hold events and pending characters
-;                    to send. 
+;                    to send. These are queueSTRUC<>s defined in queue.inc. 
 ;
 ; Known Bugs:        None.
 ; Limitations:       None.
@@ -254,7 +256,8 @@ HandleSerial    ENDP
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
-; Data Structures:   None.    
+; Data Structures:   txQueue, which is a queueStruc<> defined in queue.inc.
+;                    This keeps track of all outgoing characters.    
 ;
 ; Known Bugs:        None.
 ; Limitations:       None.
@@ -432,7 +435,8 @@ SetParity       ENDP
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
-; Data Structures:   None.    
+; Data Structures:   eventQueue, which is a queueSTRUC<> described in
+;                    queue.inc that keeps track of all the events in the system.
 ;
 ; Known Bugs:        None.
 ; Limitations:       None.
@@ -495,7 +499,8 @@ HandleSerialError     ENDP
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
-; Data Structures:   None.    
+; Data Structures:   txQueue, which is a queueSTRUC<> defined in queue.inc.
+;                    This keeps track of all outgoing characters.      
 ;
 ; Known Bugs:        None.
 ; Limitations:       None.
@@ -550,7 +555,8 @@ HandleEmptyTransmitter     ENDP
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
-; Data Structures:   None.    
+; Data Structures:   eventQueue, which is a queueSTRUC<> described in
+;                    queue.inc that keeps track of all events in the system.
 ;
 ; Known Bugs:        None.
 ; Limitations:       None.
