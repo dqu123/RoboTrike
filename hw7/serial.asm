@@ -205,7 +205,7 @@ HandelSerialSwitch:
         CALL   HandleSerialTable[BX]   ; which contains a function to call
                                        ; in each case (this is word table so
                                        ; the numbers work out perfectly to
-                                       ; just use as indices.
+                                       ; just use as indices).
                                        
         ;JMP    HandleSerialLoop
         
@@ -223,8 +223,18 @@ HandleSerial    ENDP
 
 ; SerialPutChar(c)
 ; 
-; Description:       Outputs the passed character (AL) to the serial channel.    
-; Operation:         Calls Enqueue with the passed character.
+; Description:       Outputs the passed character (AL) to the serial channel by
+;                    enqueuing it into the txQueue. The event handler dequeues
+;                    character from the txQueue to send them through the serial.
+;                    Calling this function signals that there is something
+;                    that needs to be sent, so it will kickstart the serial
+;                    if the kickstart shared variable has been set by the 
+;                    serial handler.
+;                        
+; Operation:         First checks if the queue is full. If is not full, then calls 
+;                    Enqueue with the passed character, and kickstarts iff
+;                    the kickstart is set, finally reseting the CF. If the queue 
+;                    is full, clears the CF.
 ;
 ; Arguments:         c (AL) - character to send to the serial channel.
 ; Return Value:      Resets the carry flag iff the character has been output.
@@ -251,22 +261,26 @@ SerialPutChar   PROC     NEAR
 				
         
 CheckTxQueueFull:        	
-        MOV     SI, OFFSET(txQueue) ; Check the txQueue
-        CALL    QueueFull           ; to see if it is full.
+        MOV     SI, OFFSET(txQueue)  ; Check the txQueue
+        CALL    QueueFull            ; to see if it is full.
         JZ      TxQueueFull
         ;JNZ    TxQueueNotFull
         
 TxQueueNotFull:
-        CALL    Enqueue             ; If it is not full, enqueue the char
-        ;JMP    CheckKickStart      ; and check the kickstart. 
+        CALL    Enqueue              ; If it is not full, enqueue the char
+        ;JMP    CheckKickStart       ; and check the kickstart. 
 		
 CheckKickstart:
-        CMP     kickstart, FALSE    ; Check if need to kickstart.
-        JE      SPCClearCF           
-        ;JNE    KickstartSerial
+        CMP     kickstart, TRUE      ; Check we need to kickstart the serial
+        JNE     SPCClearCF           ; (because it only triggers once to be
+        ;JE     KickstartSerial      ; efficient).
         
 KickstartSerial:
         MOV     kickstart, FALSE     ; If kickstart is TRUE, set it to FALSE.
+                                     ; We do this first to avoid critical code
+                                     ; that could happen if the THRE INT occurs
+                                     ; right after you kickstart (and before
+                                     ; you set kickstart FALSE).
         
         MOV     DX, INT_ENABLE_REG   ; Disable the THRE interrupt
         IN      AL, DX               ; by writing to the interrupt enable
@@ -278,13 +292,13 @@ KickstartSerial:
         ;JMP    SPCClearCF
 
 SPCClearCF:
-        CLC                         ; reset the CF to show the caller that
-                                    ; the char was enqueued.
+        CLC                          ; reset the CF to show the caller that
+                                     ; the char was enqueued.
         JMP     EndSerialPutChar
         
 TxQueueFull:
-        STC                         ; If it is full, set the CF to show the
-        ;JMP    EndSerialPutChar    ; caller that the char was not enqueued.
+        STC                          ; If it is full, set the CF to show the
+        ;JMP    EndSerialPutChar     ; caller that the char was not enqueued.
 
 
         
