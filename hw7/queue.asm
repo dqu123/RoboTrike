@@ -288,7 +288,6 @@ QueueFull		ENDP
 
 Dequeue			PROC		NEAR
 				PUBLIC		Dequeue
-        %CRITICAL_START
         
 BlockDequeue:
 		CALL	QueueEmpty			; Check if queue is empty and block if
@@ -317,7 +316,6 @@ EndDequeue:
 		AND		BX, ARRAY_SIZE - 1 	; ARRAY_SIZE using the fact that ARRAY_SIZE
 		MOV		[SI].head, BX		; is a power of 2.
 
-        %CRITICAL_END
         
 		RET
 		
@@ -368,7 +366,6 @@ Dequeue			ENDP
 Enqueue			PROC		NEAR
 				PUBLIC		Enqueue
                 
-        %CRITICAL_START
         
 BlockEnqueue:
 		CALL	QueueFull			; Check if queue is full and block if 
@@ -398,7 +395,6 @@ EndEnqueue:
 		AND		BX, ARRAY_SIZE - 1	; is a power of 2.
 		MOV		[SI].tail, BX		
 		
-        %CRITICAL_END
         
 		RET
 Enqueue			ENDP
