@@ -207,7 +207,7 @@ HandelSerialSwitch:
                                        ; the numbers work out perfectly to
                                        ; just use as indices).
                                        
-        ;JMP    HandleSerialLoop
+        JMP    HandleSerialLoop
         
 EndHandleSerialLoop:
         MOV     DX, INTCtrlrEOI ;send an INT 2 EOI (to clear out controller)
