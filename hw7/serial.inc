@@ -30,4 +30,4 @@ TX_QUEUE_LENGTH       EQU     0   ; This is value passed to QueueInit, which
 TX_QUEUE_ELEMENT_SIZE EQU     1   ; byte sized elements for the txQueue since
                                   ; it holds characters.
 SIZE_ERROR_TABLE      EQU     4   ; Number of error bits in the LSR.
- 
+INIT_PARITY_INDEX     EQU     0   ; initial value for parity shared variable. 

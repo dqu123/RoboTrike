@@ -15,6 +15,7 @@
 ; SetSerialDivisor(divisor) - sets the divisor latch on the serial
 ; SetLineCtrlReg(value)     - sets the value of the Line Control Register manually
 ;                             letting the programmer control all options. 
+; SetParity(parity)         - sets the parity configuration of the channel in LCR.
 ;
 ; Local functions:
 ; None.
@@ -206,6 +207,56 @@ SetLineCtrlReg  PROC     NEAR
         RET
 
 SetLineCtrlReg  ENDP
+
+
+
+; SetParity(parity)
+; 
+; Description:       Sets the parity bits to one the values specified by the
+;                    parity argument in AH. This must be one of NO_PARITY,
+;                    EVEN_PARITY, ODD_PARITY, EVEN_STICK_PARITY, and
+;                    ODD_STICK_PARITY. This design allows a programmer to
+;                    construct a table of these values to have a UI button
+;                    that will toggle through the table easily with a simple
+;                    call to SetParity(parity).
+;                    
+; Operation:         Read in the old line control reg value into AL, and then
+;                    remove the parity bits and add in the new parity bits. 
+;                    Then output through AL.
+;
+; Arguments:         parity (AH).
+; Return Value:      None.
+;
+; Local Variables:   lcr_value (AL) - value of the LCR before the change occurs.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             Reads from the line control register in the serial chip.
+; Output:            Writes to the line control register in the serial chip.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+SetParity       PROC     NEAR
+                PUBLIC   SetParity
+                
+        MOV     DX, LINE_CTRL_REG   ; Read in the current line control register
+        IN      AL, DX              ; value to save the non parity bits.
+        
+        AND     AL, NOT LCR_PARITY_MASK ; Remove the parity bits using a bit mask.
+        OR      AL, AH                  ; Add the desired parity bits.
+        OUT     DX, AL                  ; Output to the LCR.
+        
+        RET
+
+SetParity       ENDP
 
 
 CODE    ENDS

@@ -11,6 +11,7 @@
 ;
 ; Revision History:
 ;	 11/19/15  David Qu			initial revision
+;    11/21/15  David Qu         updated constants
 
 ; Addresses of registers
 SERIAL_BASE         EQU     100H            ; Base address for serial chip
@@ -104,6 +105,7 @@ EVEN_PARITY         EQU     00011000b ; even parity value
 ODD_PARITY          EQU     00001000b ; odd parity value
 EVEN_STICK_PARITY   EQU     00111000b ; even stick parity value
 ODD_STICK_PARITY    EQU     00101000b ; odd stick parity value           
+NUM_PARITY_OPTIONS  EQU     5
 
 LCR_BREAK_MASK      EQU     01000000b ; mask for LCR break bit.                                               
 LCR_BREAK           EQU     01000000b ; -1------ Sets the break control bit.
@@ -132,6 +134,7 @@ FRAMING_ERROR_BIT   EQU     00001000b ; bit for framing error
 BREAK_INT_BIT       EQU     00010000b ; bit for break interrupt
 THRE_BIT            EQU     00100000b ; bit for transmitter holding register
 TEMT_BIT            EQU     01000000b ; bit for transmitter empty
+                                      ; 0------- last bit in LSR is always zero.
 
 ; Modem Status Register (MSR)
 DCTS_BIT            EQU     00000001b ; bit for delta clear to send

@@ -19,8 +19,6 @@
 ; HandleSerial()          - handles serial interrupts.
 ; SerialPutChar(c)        - outputs a character to the serial channel.
 ; SetSerialBaudRate(rate) - sets the baud rate of the serial channel.
-; SetParity(parity)       - sets the parity configuration of the channel.
-
 ;
 ; Local functions:
 ; HandleSerialError()      - handles a serial error interrupt.
@@ -35,6 +33,8 @@
 ;                            to error events in the system. This table lets
 ;                            us loop through the bits and enqueue each as
 ;                            a separate event.
+; ParityTable              - table of parity bit pattern to toggle through
+;                            in a cyclic fashion.
 ;
 ; Revision History:
 ; 		11/19/15  David Qu		initial revision.
@@ -87,6 +87,7 @@ CODE 	SEGMENT PUBLIC 'CODE'
 		EXTRN	Dequeue:NEAR       ; Removes element from queue. 
 		EXTRN	Enqueue:NEAR       ; Adds element to queue.  
         EXTRN   SetSerialDivisor:NEAR ; Sets the serial divisor.
+        EXTRN   SetParity:NEAR     ; Sets the parity bits.
         
 ; Read-only tables
 HandleSerialTable LABEL   WORD
@@ -100,6 +101,13 @@ SerialErrorTable  LABEL   BYTE
         DB      PARITY_ERROR_BIT      ; errors. This table lets us loop
         DB      FRAMING_ERROR_BIT     ; through all the bits and process
         DB      BREAK_INT_BIT         ; them as separate events.
+        
+ParityTable       LABEL   BYTE  
+        DB      NO_PARITY             ; Table of parity bit patterns that
+        DB      EVEN_PARITY           ; correspond to various parity options.
+        DB      ODD_PARITY            ; Used by ToggleParity().
+        DB      EVEN_STICK_PARITY
+        DB      ODD_STICK_PARITY
         
 ; InitSerialVars()
 ; 
@@ -116,6 +124,7 @@ SerialErrorTable  LABEL   BYTE
 ; Shared Variables:  Writes to kickstart   - boolean that determines whether
 ;                                            the serial needs to be kickstarted.
 ;                              txQueue     - queue of transmission data to send.
+;                              parity      - toggle index for parity.
 ; Global Variables:  None.
 ;
 ; Input:             None.
@@ -136,6 +145,8 @@ InitSerialVars  PROC     NEAR
                 
         MOV     kickstart, FALSE    ; Don't need to kickstart initially since
                                     ; there is nothing in the txQueue.
+                                    
+        MOV     parity, INIT_PARITY_INDEX ; Start with initial parity setting.
                                     
         MOV     SI, OFFSET(txQueue)       ; Set arguments to QueueInit:        
         MOV     AX, TX_QUEUE_LENGTH       ; a=txQueue, length=TX_QUEUE_LENGTH,
@@ -363,26 +374,20 @@ SetSerialBaudRate   PROC     NEAR
 SetSerialBaudRate   ENDP
 
 
-
-; SetParity(parity)
+; ToggleParity()
 ; 
-; Description:       Sets the parity bits to one the values specified by the
-;                    parity argument in AH. This must be one of NO_PARITY,
+; Description:       Toggles the parity from NO_PARITY (default), to
 ;                    EVEN_PARITY, ODD_PARITY, EVEN_STICK_PARITY, and
-;                    ODD_STICK_PARITY. This design allows a programmer to
-;                    construct a table of these values to have a UI button
-;                    that will toggle through the table easily with a simple
-;                    call to SetParity(parity).
+;                    ODD_STICK_PARITY (and back to NO_PARITY).
 ;                    
-; Operation:         Read in the old line control reg value into AL, and then
-;                    remove the parity bits and add in the new parity bits. 
-;                    Then output through AL.
+; Operation:         Update the parity value MOD NUM_PARITY_OPTIONS.
+;                       
 ;
-; Arguments:         parity (AH).
+; Arguments:         None.
 ; Return Value:      None.
 ;
-; Local Variables:   lcr_value (AL) - value of the LCR before the change occurs.
-; Shared Variables:  None.
+; Local Variables:   None.
+; Shared Variables:  parity - index of parity setting in parity table.
 ; Global Variables:  None.
 ;
 ; Input:             Reads from the line control register in the serial chip.
@@ -391,26 +396,32 @@ SetSerialBaudRate   ENDP
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
-; Data Structures:   None.    
+; Data Structures:   parityTable - a table of parity bit patterns.    
 ;
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
 ; Registers Changed: flags.
 ; Special notes:     None.
-SetParity       PROC     NEAR
-                PUBLIC   SetParity
-                
-        MOV     DX, LINE_CTRL_REG   ; Read in the current line control register
-        IN      AL, DX              ; value to save the non parity bits.
+ToggleParity    PROC     NEAR
+                PUBLIC   ToggleParity
         
-        AND     AL, LCR_PARITY_MASK ; Remove the parity bits using a bit mask.
-        OR      AL, AH              ; Add the desired parity bits.
-        OUT     DX, AL              ; Output to the LCR.
+        INC     parity                  ; Move to the next parity setting.
+        MOV     AL, parity              ; Prepare to divide 
+        XOR     AH, AH                  ; parity + 1 by NUM_PARITY_OPTIONS
+        MOV     BL, NUM_PARITY_OPTIONS  ; to compute parity + 1
+        DIV     BL                      ; MOD NUM_PARITY_OPTIONS
+        MOV     parity, AH              ; Update parity variable to
+                                        ; the new parity setting.
+        
+        XOR     BH, BH                  ; Clear top byte of index to ParityTable  
+        MOV     BL, parity              ; Read the parity pattern from 
+        MOV     AH, ParityTable[BX]     ; the table and call SetParity to
+        CALL    SetParity               ; configure LCR.
         
         RET
 
-SetParity       ENDP
+ToggleParity       ENDP
 
 
 ; HandleSerialError()
@@ -426,6 +437,7 @@ SetParity       ENDP
 ; Return Value:      None.
 ;
 ; Local Variables:   event (AX) - event to enqueue.
+;                    index (BX) - which error to process.
 ; Shared Variables:  Writes to the eventQueue - which contains system events.
 ; Global Variables:  None.
 ;
@@ -450,7 +462,7 @@ HandleSerialError     PROC     NEAR
         MOV     CL, AL                   ; Save a copy in CL to restore later.
 
 HandleSerialErrorLoopInit:       
-        MOV     BX, SIZE_ERROR_TABLE     ; Loop through all the possible errors
+        XOR     BX, BX                   ; Loop through all the possible errors
                                          ; in the table.
         
 HandleSerialErrorLoop:
@@ -461,13 +473,16 @@ HandleSerialErrorLoop:
         
 EnqueueErrorEvent:
         MOV     AH, SERIAL_ERROR_EVENT   ; Enqueue an error event for each
-        CALL    EnqueueEvent             ; error that contains the specific
-                                         ; error bit in AL.
- 
+        MOV     AL, BL                   ; error that contains the specific
+        CALL    EnqueueEvent             ; error bit in AL. Encode the index
+                                         ; (BL) as the error event data to
+                                         ; make for easy switch statements.
+  
 CheckHSELoop: 
-        DEC     BX                       ; Loop through all possible errors.
-        JNZ     HandleSerialErrorLoop
-        ;JZ     EndHandelSerialError
+        INC     BX                       ; Loop through all possible errors.
+        CMP     BX, SIZE_ERROR_TABLE
+        JB      HandleSerialErrorLoop
+        ;JAE    EndHandelSerialError
         
 EndHandelSerialError:        
         
@@ -620,6 +635,8 @@ CODE    ENDS
 DATA    SEGMENT PUBLIC  'DATA'
     kickstart    DB     ?       ; Boolean that determines whether the serial
                                 ; chip should be kickstarted.
+    parity       DB     ?       ; Determines which parity state to read from
+                                ; the parity table.
     txQueue      queueSTRUC<>   ; Transmission queue. This is a byte queue that
                                 ; holds characters that need to be send through
                                 ; the serial unit. It acts as a buffer to hold

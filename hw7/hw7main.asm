@@ -56,6 +56,7 @@ CODE    SEGMENT PUBLIC 'CODE'
 		EXTRN 	InitSerialVars:NEAR         ;Initialize serial shared variables.
 		EXTRN   SerialIOTest:NEAR           ;Tests serial behavior.
         EXTRN   SetSerialBaudRate:NEAR      ;Sets the baud rate.
+        EXTRN   ToggleParity:NEAR           ;Toggles the parity setting.
 
 START:  
 
@@ -82,6 +83,15 @@ MAIN:
         CALL    InitSerialVars          ;initialize the serial shared variables
 		CALL 	InitSerialChip          ;initialize the serial chip registers
         
+        ; Test parity setting
+MainTestParity:
+        MOV     BX, TOGGLE_PARITY_NUM   ; Toggle parity TOGGLE_PARITY_NUM
+        CALL    ToggleParity            ; times.
+        DEC     BX
+        JNZ     MainTestParity
+        ;JZ     MainTestBaudRate
+        
+MainTestBaudRate:        
         MOV     BX, TEST_BAUD_RATE      ;Test set baud rate.
         CALL    SetSerialBaudRate
         
