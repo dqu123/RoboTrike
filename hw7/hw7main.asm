@@ -85,8 +85,6 @@ MAIN:
 
 		CALL 	SerialIOTest	        ;run serial test routine. This should never
                                         ;return.
-InfiniteLoop:
-        JMP     InfiniteLoop
         
         RET                             ;Exit program.
 
