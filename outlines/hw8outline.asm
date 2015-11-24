@@ -12,24 +12,32 @@
 ; design with more details follows after the table of contents.
 ; 
 ; Public functions:
-; InitParser()        - initializes parser shared variables.
-; ParseSerialChar(c)  - parse the passed character as part of a serial command. 
+; InitParser()         - initializes parser shared variables.
+; ParseSerialChar(c)   - parse the passed character as part of a serial command. 
 ;
 ; Local functions:
-; GetParserToken      - returns the token class and token value for the passed char.
-; SetCommand          - sets the command shared variable.
-; AddDigit            - updates the value shared variable based on the next digit.
-; SetSign             - sets the sign shared variable.
-; DoCommand           - does a command based on the command, value, and sign
-;                       shared variables.
-; DoNOP               - does nothing.
-; SetError        - enqueues an error to the event queue.
+; GetParserToken(char) - returns the token class and token value for the passed char.
+; SetCommand(tkn_val)  - sets the command shared variable.
+; AddDigit(tkn_val)    - updates the value shared variable based on the next digit.
+; SetSign(tkn_val)     - sets the sign shared variable.
+; DoCommand(tkn_val)   - does a command based on the command, value, and sign
+;                        shared variables.
+; SetAbsSpeed()        - sets absolute speed of the RoboTrike.
+; SetRelativeSpeed()   - sets relative speed of the RoboTrike.
+; SetDirection()       - sets direction of the RoboTrike.
+; RotateTurret()       - rotates turret of the RoboTrike.
+; SetTurretEle()       - sets turret elevation angle.
+; FireLaser()          - fires the laser.
+; LaserOff()           - turns the laser off
+; DoNOP(tkn_val)       - does nothing.
+; SetError(tkn_val)    - sets the return value shared variable to PARSER_ERROR.
 ; 
 ; 
 ; Read only tables:
 ; TokenTypeTable      - table of token types.
 ; TokenValueTable     - table of token values.
 ; StateTable          - table of state transitions.
+; CommandTable        - table of commands to do.
 ;
 ; Note that the token tables are created using macros to avoid having to sync
 ; multiple tables.
@@ -121,6 +129,10 @@ TOKEN_OTHER             EQU     5       ; anything else
 
 NUM_TOKEN_TYPES         EQU     6       ; number of token types
 
+; Token values
+NO_SIGN                 EQU     FALSE   ; Default no sign value.
+                                        ; This lets us know if the optional sign
+                                        ; has been included or not.
 ; Command values
 COMMAND_S               EQU     0       ; set absolute speed command
 COMMAND_V               EQU     2       ; set relative speed command
@@ -129,6 +141,8 @@ COMMAND_T               EQU     6       ; rotate turret angle command
 COMMAND_E               EQU     8       ; set turret elevation angle command
 COMMAND_F               EQU     10      ; fire laser command
 COMMAND_O               EQU     12      ; laser off command
+COMMAND_NONE            EQU     14      ; No command (Can put a debugging function
+                                        ; here during testing).
 
 ; State constants:
 ;   note that these MUST match the layout of the transition table. 
@@ -147,24 +161,31 @@ TOKEN_MASK              EQU     01111111B ; mask high bit of token.
 
 ; Shared variables.
 DATA    SEGMENT PUBLIC  'DATA'
+    state           DB  ?   ; current FSM state.
     command         DB  ?   ; index of command to use.
-    value           DW  ?   ; value used by transitions
-    sign            DB  ?   ; sign of value
+    value           DW  ?   ; value used by transitions.
+    sign            DB  ?   ; sign of value. signals if the optional sign token
+                            ; has been included or not.
     return          DB  ?   ; return value for ParseSerialChar.
     
 DATA    ENDS
 
 ; InitParser()
 ; 
-; Description:       Initializes the command, value, sign, and return shared
-;                    variables.       
-; Operation:         Sets command = 
+; Description:       Initializes the state, command, value, sign, and return 
+;                    shared variables.       
+; Operation:         Sets state = INITIAL_STATE, command = COMMAND_NONE, 
+;                    value = 0, sign = NO_SIGN, and return = PARSER_GOOD.
 ;
 ; Arguments:         None.
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
-; Shared Variables:  None.
+; Shared Variables:  Writes to state   - current state in FSM
+;                    Writes to command - command being processed
+;                    Writes to value   - value being built up
+;                    Writes to sign    - flag for optional sign token
+;                    Writes to return  - return status of ParseSerialChar
 ; Global Variables:  None.
 ;
 ; Input:             None.
@@ -178,49 +199,112 @@ DATA    ENDS
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: None.
 ; Special notes:     None.
+;
 ; Pseudo code:
-; 
+; state = INITIAL_STATE
+; command = COMMAND_NONE
+; value = 0
+; sign = NO_SIGN
+; return = PARSER_GOOD
 
-; ParseSerialChar(c)
-; 
-; Description:       
-; Operation:         
-;
-; Arguments:         None.
-; Return Value:      None.
-;
-; Local Variables:   None.
-; Shared Variables:  None.
-; Global Variables:  None.
-;
-; Input:             None.
-; Output:            None.
-;
-; Error Handling:    None.
-;
-; Algorithms:        None.
-; Data Structures:   None.    
-;
-; Known Bugs:        None.
-; Limitations:       None.
-;
-; Registers Changed: flags.
-; Special notes:     None.
-; Pseudo code:
-; 
 
-; ParseSerialChar(c)
+; ParseSerialChar(char)
 ; 
-; Description:       
-; Operation:         
+; Description:       Parses the next serial character by using a Mealy FSM to 
+;                    implement the RoboTrike Serial Command Format.
+; Operation:         First get the token_value and token_type using GetParserToken().
+;                    Then, perform the action specified by the state and token_type
+;                    with the token_value as an argument. Finally, update the
+;                    state based on the state and token_type combination.
 ;
-; Arguments:         None.
+; Arguments:         char (AL) - character from serial to parse.
+; Return Value:      return_status - status value indicating whether or not
+;                                    the call was valid / successful.
+;
+; Local Variables:   token_value (AL) - value of the token for action function
+;                    token_type  (AH) - type of token to determine state transition
+;                    index (BX)       - byte index into state table
+; Shared Variables:  Read/Writes to state   - current state in FSM
+;                    Read/Writes to command - command being processed
+;                    Read/Writes to value   - value being built up
+;                    Read/Writes to sign    - flag for optional sign token
+;                    Read/Writes to return  - return status of ParseSerialChar
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags, AX, BX.
+; Special notes:     None.
+;
+; Pseudo code:
+; unsigned byte token_value, unsigned byte token_type = GetParserToken(c)
+; unsigned word index = NUM_TOKEN_TYPES * state + token_type
+; StateTable[index].action(token_value)
+; state = StateTable[index].nextstate
+; return return  ; Return the return shared variable. Assembly doesn't have
+;                ; return as a keyword, so this should be fine.
+
+
+; GetParserToken()
+; 
+; Description:       Returns the token_value (AL) and token_type (AH) of a 
+;                    given character received from the serial.
+; Operation:         First, removes the high bit of the char, because it should
+;                    be a standard ASCII value from 0 to 127. Then look up the
+;                    token_value and token_type
+;
+; Arguments:         char (AL) - character from serial to parse
+; Return Value:      token_value (AL) - value of the token for action function
+;                    token_type  (AH) - type of token to determine state transition
+;
+; Local Variables:   token_value (AL) - value of the token for action function
+;                    token_type  (AH) - type of token to determine state transition
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags, AX.
+; Special notes:     None.
+;
+; Pseudo code:
+; char &= TOKEN_MASK
+; unsigned byte token_value = TokenValueTable[char]
+; unsigned byte token_type = TokenTypeTable[char] 
+; return token_value, token_type
+
+
+; SetCommand(tkn_val)
+; 
+; Description:       Sets the command shared variable according to the passed
+;                    tkn_val (AL).
+; Operation:         Sets command = tkn_val.
+;
+; Arguments:         tkn_val (AL) - token value for action.
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
-; Shared Variables:  None.
+; Shared Variables:  Read/Writes to command - command being processed
 ; Global Variables:  None.
 ;
 ; Input:             None.
@@ -236,5 +320,8 @@ DATA    ENDS
 ;
 ; Registers Changed: flags.
 ; Special notes:     None.
+;
 ; Pseudo code:
-; 
+; command = tkn_val
+
+
