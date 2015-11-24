@@ -13,9 +13,11 @@
 
 ; Event constants
 TEST_BAUD_RATE      EQU     19200     ; Value to test setSerialBaudRate.
-TOGGLE_PARITY_NUM   EQU     6         ; Times to toggle parity.
+TOGGLE_PARITY_NUM   EQU     7         ; Times to toggle parity.
                                       ; 0 MOD 5 = NO_PARITY
                                       ; 1 MOD 5 = EVEN_PARITY
                                       ; 2 MOD 5 = ODD_PARITY
                                       ; 3 MOD 5 = EVEN_STICK_PARITY
                                       ; 4 MOD 5 = ODD_STICK_PARITY
+                                      ; Must be >= 1 since the loop runs
+                                      ; at least one time.

@@ -17,10 +17,10 @@
 ;                   fox jumped over the lazy block dog\r\n" is output 100 times
 ;                   numbered from 0 to 99. The user can test the SetSerialBaudRate
 ;                   and ToggleParity functions by changing the constants defined
-;                   in hw7main.inc.
+;                   in hw7main.inc (TOGGLE_PARITY_NUM, and TEST_BAUD_RATE).
 ;
-; Input:            Serial Input.
-; Output:           Serial Output.
+; Input:            Serial Input - reads various serial registers.
+; Output:           Serial Output - writes to various serial registers.
 ;
 ; User Interface:   None.
 ; Error Handling:   None.
@@ -33,7 +33,8 @@
 ;
 ; Revision History:
 ;    11/19/15  David Qu	               initial revision
-;    11/21/15  David Qu                added comments, more testing options.
+;    11/21/15  David Qu                added comments, more testing options
+;    11/22/15  David Qu                fixed error with loop
 
 ; local include files
 $INCLUDE(genMacro.inc)
@@ -87,10 +88,10 @@ MAIN:
 		CALL 	InitSerialChip          ;initialize the serial chip registers
         
         ; Test parity setting
+        MOV     CX, TOGGLE_PARITY_NUM   ; Toggle parity TOGGLE_PARITY_NUM times.
 MainTestParity:
-        MOV     BX, TOGGLE_PARITY_NUM   ; Toggle parity TOGGLE_PARITY_NUM
-        CALL    ToggleParity            ; times.
-        DEC     BX
+        CALL    ToggleParity            ; Toggles at least once.
+        DEC     CX
         JNZ     MainTestParity
         ;JZ     MainTestBaudRate
         

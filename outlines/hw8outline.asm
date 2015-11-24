@@ -75,11 +75,10 @@
 ; 
 ; Outputs/Actions
 ;   Actions       Description                           Implementing function
-;   setCommand    sets which command to use             SetCommand()
+;   setCommand    reset vars and set command to use     SetCommand()
 ;   addDigit      increases the value shared variable   AddDigit()
 ;   setSign       sets the sign shared variable         SetSign()
 ;   doCommand     perform command                       DoCommand()
-;   reset         reset shared variables                InitParser()
 ;   error         set return shared var to PARSER_ERROR SetError()
 ;       
 ; States
@@ -93,19 +92,24 @@
 ;
 ; State Transition Table
 ;                                   Current Input
-;   Current State     digit       sign       command      simpleCmd       endCmd     other   
-;   InitialState    ResetState  ResetState   ReadCmd      ReadSimpleCmd ResetState  ResetState
-;                     error       error      setCommand    setCommand      error      error
-;   ReadCmd         DigitState  SignState    ResetState   ResetState    ResetState  ResetState
-;                    addDigit    setSign       error        error          error      error
-;   ReadSimpleCmd   ResetState  ResetState   ResetState   ResetState    ResetState  ResetState
-;                     error       error        error        error        doCommand    error
-;   SignState       DigitState  ResetState   ResetState   ResetState    ResetState  ResetState
-;                    addDigit     error        error        error          error      error
-;   DigitState      DigitState  ResetState   ResetState   ResetState    ResetState  ResetState
-;                    addDigit     error        error        error        doCommand    error
-;   ResetState      ResetState  ResetState   ReadCmd      ReadSimpleCmd ResetState  ResetState
-;                     error       error        reset        reset          error      error
+;   Current State     digit       sign       command      simpleCmd       endCmd    other*  
+;   InitialState    ResetState  ResetState   ReadCmd      ReadSimpleCmd ResetState  
+;                     error       error      setCommand    setCommand      error     
+;   ReadCmd         DigitState  SignState    ResetState   ResetState    ResetState  
+;                    addDigit    setSign       error        error          error     
+;   ReadSimpleCmd   ResetState  ResetState   ResetState   ResetState    ResetState 
+;                     error       error        error        error        doCommand  
+;   SignState       DigitState  ResetState   ResetState   ResetState    ResetState 
+;                    addDigit     error        error        error          error    
+;   DigitState      DigitState  ResetState   ResetState   ResetState    ResetState  
+;                    addDigit     error        error        error        doCommand 
+;   ResetState      ResetState  ResetState   ReadCmd      ReadSimpleCmd ResetState  
+;                     error       error      setCommand   setCommand       error    
+;
+; Each entry in the table first has the next state to transition and then
+; the transition action. 
+; *Note that all "other" tokens lead to the ResetState with an error transition, 
+; so they are left off the table.
 ;
 ; Note this design uses the ResetState for both reseting out of errors and
 ; reseting from a completed command. This is because in both cases, you stay
@@ -304,9 +308,9 @@ DATA    ENDS
 
 ; SetCommand(tkn_val)
 ; 
-; Description:       Sets the command shared variable according to the passed
-;                    tkn_val (AL).
-; Operation:         Sets command = tkn_val.
+; Description:       Initializes the parser shared variables and then sets the 
+;                    command shared variable according to the passed tkn_val (AL).
+; Operation:         Calls InitParser() and then sets command = tkn_val.
 ;
 ; Arguments:         tkn_val (AL) - token value for action.
 ; Return Value:      None.
@@ -331,6 +335,7 @@ DATA    ENDS
 ; Special notes:     None.
 ;
 ; Pseudo code:
+; InitParser()
 ; command = tkn_val
 
 
