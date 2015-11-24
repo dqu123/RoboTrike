@@ -20,8 +20,11 @@
 ; SetCommand(tkn_val)  - sets the command shared variable.
 ; AddDigit(tkn_val)    - updates the value shared variable based on the next digit.
 ; SetSign(tkn_val)     - sets the sign shared variable.
+; SetError(tkn_val)    - sets the return value shared variable to PARSER_ERROR.
 ; DoCommand(tkn_val)   - does a command based on the command, value, and sign
 ;                        shared variables.
+;
+; Command functions (local):
 ; SetAbsSpeed()        - sets absolute speed of the RoboTrike.
 ; SetRelativeSpeed()   - sets relative speed of the RoboTrike.
 ; SetDirection()       - sets direction of the RoboTrike.
@@ -29,15 +32,15 @@
 ; SetTurretEle()       - sets turret elevation angle.
 ; FireLaser()          - fires the laser.
 ; LaserOff()           - turns the laser off
-; DoNOP(tkn_val)       - does nothing.
-; SetError(tkn_val)    - sets the return value shared variable to PARSER_ERROR.
 ; 
 ; 
 ; Read only tables:
-; TokenTypeTable      - table of token types.
-; TokenValueTable     - table of token values.
-; StateTable          - table of state transitions.
-; CommandTable        - table of commands to do.
+; TokenTypeTable      - table of token types (see parser design overview)
+; TokenValueTable     - table of token values (see parser design overview)
+; StateTable          - table of state transitions (see parser design overview)
+; CommandTable        - table of commands to do. Consists of SetAbsSpeed,
+;                       SetRelativeSpeed, SetDirection, RotateTurret, SetTurretEle,
+;                       FireLaser, and LaserOff.
 ;
 ; Note that the token tables are created using macros to avoid having to sync
 ; multiple tables.
@@ -77,7 +80,6 @@
 ;   setSign       sets the sign shared variable         SetSign()
 ;   doCommand     perform command                       DoCommand()
 ;   reset         reset shared variables                InitParser()
-;   NOP           do nothing                            DoNOP()
 ;   error         set return shared var to PARSER_ERROR SetError()
 ;       
 ; States
@@ -103,7 +105,7 @@
 ;   DigitState      DigitState  ResetState   ResetState   ResetState    ResetState  ResetState
 ;                    addDigit     error        error        error        doCommand    error
 ;   ResetState      ResetState  ResetState   ReadCmd      ReadSimpleCmd ResetState  ResetState
-;                      NOP        NOP          reset        reset           NOP       NOP
+;                     error       error        reset        reset          error      error
 ;
 ; Note this design uses the ResetState for both reseting out of errors and
 ; reseting from a completed command. This is because in both cases, you stay
@@ -111,6 +113,12 @@
 ; is called as part of the bad transitions that lead to ResetState. The
 ; DoCommand is called as part of the valid transition from digit state to 
 ; ResetState or ReadSimpleCmd to ResetState. 
+
+; Motor constants in motor.inc (shown for reference).
+MAX_TOTAL_SPEED     EQU     65534 ; Maximum total speed of the RoboTrike on a
+                                  ; dimensionless scale (see total_speed).
+NO_SPEED_CHANGE     EQU     MAX_TOTAL_SPEED + 1 ; Indicates no change in speed.
+NO_ANGLE_CHANGE     EQU     -32768; Indicates no change in angle
 
 ; Return values for ParseSerialChar (PSC)
 PARSER_GOOD             EQU     0       ; Return value for a good call to PSC.
@@ -304,7 +312,7 @@ DATA    ENDS
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
-; Shared Variables:  Read/Writes to command - command being processed
+; Shared Variables:  Writes to command - command being processed
 ; Global Variables:  None.
 ;
 ; Input:             None.
@@ -316,7 +324,8 @@ DATA    ENDS
 ; Data Structures:   None.    
 ;
 ; Known Bugs:        None.
-; Limitations:       None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
 ;
 ; Registers Changed: flags.
 ; Special notes:     None.
@@ -324,4 +333,417 @@ DATA    ENDS
 ; Pseudo code:
 ; command = tkn_val
 
+
+; AddDigit(tkn_val)
+; 
+; Description:       Sets the value shared variable according to the passed
+;                    tkn_val (AL).
+; Operation:         Sets value = 10 * value + tkn_val.
+;
+; Arguments:         tkn_val (AL) - token value for action.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Read/Writes to value - value being built up
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+;
+; Pseudo code:
+; value = 10 * value + tkn_val
+
+
+; SetSign(tkn_val)
+; 
+; Description:       Sets the sign shared variable according to the passed
+;                    tkn_val (AL).
+; Operation:         Sets sign = tkn_val.
+;
+; Arguments:         tkn_val (AL) - token value for action.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Writes to sign - flag for option sign token
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: None.
+; Special notes:     None.
+;
+; Pseudo code:
+; sign = tkn_val
+
+
+; DoCommand(tkn_val)
+; 
+; Description:       Does a command according to the command shared variable.
+; Operation:         Uses the CommandTable to determine which function to call.
+;                    The command value is simply the byte index in the CommandTable.
+;
+; Arguments:         tkn_val (AL) - token value for action. Though this is
+;                                   not used, it is passed to us by the
+;                                   structure of the FSM for consistency,
+;                                   so it is documented as an argument.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads command - command being processed
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+;
+; Pseudo code:
+; CommandTable[command]()
+
+
+; SetError(tkn_val)
+; 
+; Description:       Sets the return shared variable to PARSER_ERROR.
+; Operation:         Sets return = PARSER_ERROR.
+;
+; Arguments:         tkn_val (AL) - token value for action. Though this is
+;                                   not used, it is passed to us by the
+;                                   structure of the FSM for consistency,
+;                                   so it is documented as an argument.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads command - command being processed
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: None.
+; Special notes:     None.
+;
+; Pseudo code:
+; return = PARSER_ERROR
+
+
+; SetAbsSpeed()
+; 
+; Description:       Sets the absolute speed of the RoboTrike based on the
+;                    shared variables. Is only called after a correctly
+;                    parsed string reaches the TOKEN_END_CMD token. Should
+;                    only be used in the CommandTable.
+; Operation:         First checks if the sign has been set, and makes it 1
+;                    if NO_SIGN. Then multiplies the value by sign, and
+;                    calls SetMotorSpeed() to set the absolute motor speed.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads value - value being built up
+;                    Reads sign  - flag for optional sign token
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+;
+; Pseudo code:
+; if (sign == NO_SIGN)
+;     sign = 1
+; value *= sign
+; SetMotorSpeed(value, NO_ANGLE_CHANGE)
+
+
+; SetRelativeSpeed()
+; 
+; Description:       Sets the relative speed of the RoboTrike based on the
+;                    shared variables. Is only called after a correctly
+;                    parsed string reaches the TOKEN_END_CMD token. Should
+;                    only be used in the CommandTable.
+; Operation:         First checks if the sign has been set, and makes it 1
+;                    if NO_SIGN. Then multiplies the value by sign, adds the
+;                    current speed (found via GetMotorSpeed) and
+;                    calls SetMotorSpeed() to set the new motor speed.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads value - value being built up
+;                    Reads sign  - flag for optional sign token
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: flags.
+; Special notes:     The specification states that if after adding the the 
+;                    specified relative speed, the resulting speed is negative,
+;                    it should be truncated to zero, and the RoboTrike should
+;                    be halted.
+;
+; Pseudo code:
+; if (sign == NO_SIGN)
+;    sign = 1
+; value *= sign
+; value += GetMotorSpeed()
+; if (value < 0)
+;     value = 0
+; SetMotorSpeed(value, NO_ANGLE_CHANGE)
+
+
+; SetDirection()
+; 
+; Description:       Sets the relative direction of the RoboTrike based on the
+;                    shared variables. Is only called after a correctly
+;                    parsed string reaches the TOKEN_END_CMD token. Should
+;                    only be used in the CommandTable.
+; Operation:         First checks if the sign has been set. If not, then
+;                    sets sign = 1. Then sets value = value * sign + GetMotorDirection()
+;                    because value is treated as a relative direction.
+;                    Finally calls SetMotorSpeed(NO_SPEED_CHANGE, value)
+;                    to change the Robotrike direction.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads value - value being built up
+;                    Reads sign  - flag for optional sign token
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+;
+; Pseudo code:
+; if (sign == NO_SIGN)
+;   sign = 1
+; value = value * sign + GetMotorDirection()
+; SetMotorSpeed(NO_SPEED_CHANGE, value)
+
+
+; RotateTurret()
+; 
+; Description:       Rotates the turret of the RoboTrike based on the
+;                    shared variables. Is only called after a correctly
+;                    parsed string reaches the TOKEN_END_CMD token. Should
+;                    only be used in the CommandTable.
+; Operation:         First checks if the sign has been set. If not, then
+;                    simply calls SetTurretAngle(value) to set the absolute
+;                    turret angle. If the sign has been set, sets value *= sign, 
+;                    and then sets the relative angle using SetRelTurretAngle(value).
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads value - value being built up
+;                    Reads sign  - flag for optional sign token
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: flags.
+; Special notes:     The specification states that if the sign token is present
+;                    a relative angle should be set. Otherwise an absolute
+;                    angle is set.
+;
+; Pseudo code:
+; if (sign)
+;   value *= sign
+;   SetRelTurretAngle(value)
+; else
+;   SetTurretAngle(value)
+
+
+; SetTurretEle()
+; 
+; Description:       Sets the turret elevation of the RoboTrike based on the
+;                    shared variables. Is only called after a correctly
+;                    parsed string reaches the TOKEN_END_CMD token. Should
+;                    only be used in the CommandTable.
+; Operation:         First checks if the sign has been set. If not, then
+;                    sets sign = 1. Then sets value *= sign, and 
+;                    and sets the absolute angle using SetTurretElevation(value).
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads value - value being built up
+;                    Reads sign  - flag for optional sign token
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+;
+; Pseudo code:
+; if (sign == NO_SIGN)
+;    sign = 1
+; value *= sign
+; SetTurretElevation(value)
+
+
+; FireLaser()
+; 
+; Description:       Fires the RoboTrike laser. Is only called after a correctly
+;                    parsed string reaches the TOKEN_END_CMD token. Should
+;                    only be used in the CommandTable.
+; Operation:         Calls SetLaser(TRUE) to fire the laser.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads value - value being built up
+;                    Reads sign  - flag for optional sign token
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+;
+; Pseudo code:
+; SetLaser(TRUE)
+
+
+; LaserOff()
+; 
+; Description:       Turns off the RoboTrike laser. Is only called after a correctly
+;                    parsed string reaches the TOKEN_END_CMD token. Should
+;                    only be used in the CommandTable.
+; Operation:         Calls SetLaser(FALSE) to turn off the laser.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads value - value being built up
+;                    Reads sign  - flag for optional sign token
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+;
+; Pseudo code:
+; SetLaser(FALSE)
 
