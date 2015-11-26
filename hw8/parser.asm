@@ -591,10 +591,10 @@ SetDirectionValue:
         IMUL    BX                   ; since value is a word.
        
 SetDirectionOverflow:                ; Prevent overflow by MODing value by 360.
-        XOR     DX, DX               ; Perform MOD by division, so need to
-                                     ; clear out DX.                                   
         MOV     BX, 360              ; Compute angle MOD 360 to prevent overflow 
-        IDIV    BX                   ; when adding the current angle.
+                                     ; when adding the current angle.
+        CWD                          ; Perform MOD by signed division, so need to
+        IDIV    BX                   ; set DX to sign extend AX.        
         
 SetDirectionAbsAngle:                ; Compute the absolute angle
         MOV     BX, AX               ; Save value before calling GetMotorDirection.
