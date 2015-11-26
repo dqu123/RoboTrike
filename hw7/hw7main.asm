@@ -43,12 +43,11 @@ $INCLUDE(hw7main.inc)
 
 
 CGROUP  GROUP   CODE
-DGROUP  GROUP   DATA, STACK
 
 CODE    SEGMENT PUBLIC 'CODE'
 
 
-        ASSUME  CS:CGROUP, DS:DGROUP, ES:NOTHING
+        ASSUME  CS:CGROUP, DS:DATA, ES:NOTHING
 
 
 ; external function declarations
@@ -65,11 +64,11 @@ CODE    SEGMENT PUBLIC 'CODE'
 START:  
 
 MAIN:
-        MOV     AX, DGROUP              ;initialize the stack pointer
+        MOV     AX, STACK              ;initialize the stack pointer
         MOV     SS, AX
-        MOV     SP, OFFSET(DGROUP:TopOfStack)
+        MOV     SP, OFFSET(TopOfStack)
 
-        MOV     AX, DGROUP              ;initialize the data segment
+        MOV     AX, DATA               ;initialize the data segment
         MOV     DS, AX
 
 

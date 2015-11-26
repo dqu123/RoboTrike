@@ -75,10 +75,9 @@ $INCLUDE(eoi.inc)      ; EOIs for event handler.
 ; considered.
 
 CGROUP	GROUP	CODE 
-DGROUP  GROUP   DATA
 
 CODE 	SEGMENT PUBLIC 'CODE'
-		ASSUME 	CS:CGROUP, DS:DGROUP
+		ASSUME 	CS:CGROUP, DS:DATA
         
         ; external function declarations
         EXTRN 	EnqueueEvent:NEAR  ; Enqueues to the event queue.
