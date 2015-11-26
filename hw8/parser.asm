@@ -222,7 +222,6 @@ ParseSerialChar ENDP
 ; Registers Changed: flags, AX, BX.
 ; Special notes:     None.
 GetParserToken  PROC     NEAR
-                PUBLIC   GetParserToken
                 
 InitGetParserToken:	            ;setup for lookups
         AND	    AL, TOKEN_MASK  ;strip unused bits (high bit)
@@ -280,7 +279,6 @@ GetParserToken  ENDP
 ; Registers Changed: flags, AX, BS.
 ; Special notes:     None.
 AddDigit        PROC     NEAR
-                PUBLIC   AddDigit
                 
         IMUL    BX, value, 10    ; Multiply the current value by 10
         JO      AddDigitOverflow ; and check for overflow. (Seeing another
@@ -339,7 +337,6 @@ AddDigit        ENDP
 ; Registers Changed: None.
 ; Special notes:     None.
 SetSign         PROC     NEAR
-                PUBLIC   SetSign
                 
         MOV     sign, AL   ; Only transitions that calls this are from
                            ; SIGN states to DIGIT states, where the tkn_val
@@ -380,7 +377,6 @@ SetSign         ENDP
 ; Registers Changed: AL.
 ; Special notes:     None.
 GetParserError  PROC     NEAR
-                PUBLIC   GetParserError
                 
         MOV     AL, PARSER_ERROR    ; Return error status through AL.
         RET                         ; This is returned by ParseSerialChar.
@@ -422,7 +418,6 @@ GetParserError  ENDP
 ; Registers Changed: flags, AX, BX, DX.
 ; Special notes:     None.
 SetAbsSpeed     PROC     NEAR
-                PUBLIC   SetAbsSpeed
                 
         CMP     sign, NO_SIGN           ; First check if sign token was seen.
         JNE     DoSetAbsSpeed           ; If so, the sign has been set.
@@ -492,7 +487,6 @@ SetAbsSpeed     ENDP
 ;                    the end of a valid parser path, so overflows are handled
 ;                    gracefully by setting value to MAX_SIGNED_VALUE.
 SetRelSpeed     PROC     NEAR
-                PUBLIC   SetRelSpeed
                 
         CMP     sign, NO_SIGN           ; First check if sign token was seen.
         JNE     SetRelSpeedValue        ; If so, the sign has been set.
@@ -581,7 +575,6 @@ SetRelSpeed     ENDP
 ; Registers Changed: flags, AX, BX, DX.
 ; Special notes:     None.
 SetDirection    PROC     NEAR
-                PUBLIC   SetDirection
                 
         CMP     sign, NO_SIGN           ; First check if sign token was seen.
         JNE     SetDirectionValue       ; If so, the sign has been set.
@@ -661,7 +654,6 @@ SetDirection    ENDP
 ;                    a relative angle should be set. Otherwise an absolute
 ;                    angle is set.
 RotateTurret    PROC     NEAR
-                PUBLIC   RotateTurret
                 
         MOV     AX, value               ; Move value to AX for processing.        
         CMP     sign, NO_SIGN           ; First check if sign token was seen.
@@ -723,7 +715,6 @@ RotateTurret    ENDP
 ; Registers Changed: flags, AX, BX, DX.
 ; Special notes:     None.
 ParserSetTurretEle PROC     NEAR
-                   PUBLIC   ParserSetTurretEle
                 
         CMP     sign, NO_SIGN           ; First check if sign token was seen.
         JNE     DoParserSetTurretEle    ; If so, the sign has been set.
@@ -781,7 +772,6 @@ ParserSetTurretEle ENDP
 ; Registers Changed: flags, AL.
 ; Special notes:     None.
 FireLaser       PROC     NEAR
-                PUBLIC   FireLaser
                 
 DoFireLaser:
         CALL    SetLaser            ; Set laser according to token value.
