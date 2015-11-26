@@ -14,11 +14,11 @@
 ; design with more details follows after the table of contents.
 ; 
 ; Public functions:
+; InitParser()         - initializes parser shared variables for new command.
 ; ParseSerialChar(c)   - parse the passed character as part of a serial command. 
 ;
 ; Local functions:
 ; GetParserToken(char) - returns the token class and token value for the passed char.
-; InitParser()         - initializes parser shared variables for new command.
 ; AddDigit(tkn_val)    - updates the value shared variable based on the next digit.
 ; SetSign(tkn_val)     - sets the sign shared variable based on the token value.
 ; GetParserError()     - returns PARSER_ERROR.
@@ -151,7 +151,8 @@ InitParser      ENDP
 ;                    (constant) and an ACTION (function).
 ;
 ; Known Bugs:        None.
-; Limitations:       None.
+; Limitations:       Must call InitParser before using this function to start
+;                    in the correct state.
 ;
 ; Registers Changed: flags, AX, BX, CX, DH.
 ; Special notes:     None.

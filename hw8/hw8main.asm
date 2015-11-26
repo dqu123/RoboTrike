@@ -25,7 +25,7 @@
 ;
 ; Revision History:
 ;    11/25/15  David Qu	               initial revision
-
+;    11/26/15  David Qu                added InitParser call
 
 ; local include files
 
@@ -39,7 +39,8 @@ CODE    SEGMENT PUBLIC 'CODE'
 
 
 ; external function declarations
-		EXTRN   ParseTest:NEAR          ;Tests parser behavior.
+        EXTRN   InitParser:NEAR         ;initialize shared variables
+		EXTRN   ParseTest:NEAR          ;tests parser behavior.
 
 START:  
 
@@ -51,6 +52,10 @@ MAIN:
         MOV     AX, DATA                ;initialize the data segment
         MOV     DS, AX
 
+        CALL    InitParser              ;initialize parser shared varibles,
+                                        ;so the parser will start in the
+                                        ;RESET_STATE.
+       
 		CALL 	ParseTest	            ;run parser test routine. This should never
                                         ;return.
         
