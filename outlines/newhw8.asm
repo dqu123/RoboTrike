@@ -49,5 +49,7 @@
 ;                                   Current Input
 ;   Current State     digit       sign       S_CMD   V_CMD  D_CMD   T_CMD   E_CMD  LASER_CMD  endCmd    other*  
 ;   ResetState     ResetState   ResetState  READ_S  READ_V  READ_D  READ_T  READ_E READ_LASER ResetState ResetState    
-;                       e           e       Init      Init   Init    Init    Init                        
-;   READ_S         ResetState
+;                       e           e       Init      Init   Init    Init    Init   FireLaser ResetState                    
+;   READ_LASER     Reset           Reset                                                       Init
+;   READ_S          DIGIT_S      SIGN_S     ResetState                                       
+;   SIGN_S          DIGIT_S
