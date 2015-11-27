@@ -54,13 +54,18 @@ READ_D_STATE            EQU     3       ; just read "D"
 READ_T_STATE            EQU     4       ; just read "T"
 READ_E_STATE            EQU     5       ; just read "E"
 READ_LASER_STATE        EQU     6       ; just read "F" or "O"
-S_DIGIT_STATE           EQU     7       ; just read digit token after "S"
-V_DIGIT_STATE           EQU     8       ; just read digit token after "V"
-D_DIGIT_STATE           EQU     9       ; just read digit token after "D"
-T_DIGIT_STATE           EQU     10      ; just read digit token after "T"
-E_DIGIT_STATE           EQU     11      ; just read digit token after "E"
+S_SIGN_STATE            EQU     7       ; just read sign token after "S"
+V_SIGN_STATE            EQU     8       ; just read sign token after "V"
+D_SIGN_STATE            EQU     9       ; just read sign token after "D"
+T_SIGN_STATE            EQU     10      ; just read sign token after "T"
+E_SIGN_STATE            EQU     11      ; just read sign token after "E"
+S_DIGIT_STATE           EQU     12      ; just read digit token after "S"
+V_DIGIT_STATE           EQU     13      ; just read digit token after "V"
+D_DIGIT_STATE           EQU     14      ; just read digit token after "D"
+T_DIGIT_STATE           EQU     15      ; just read digit token after "T"
+E_DIGIT_STATE           EQU     16      ; just read digit token after "E"
 
-NUM_STATES              EQU     12      ; number of states
+NUM_STATES              EQU     17      ; number of states
 
 ; Other constants
 TOKEN_MASK              EQU     01111111B ; mask high bit of token.
