@@ -519,12 +519,13 @@ SetAbsSpeed     ENDP
 ; Description:       Sets the relative speed of the RoboTrike based on the
 ;                    shared variables. Is only called after a correctly
 ;                    parsed string reaches the TOKEN_END_CMD token, so returns
-;                    PARSER_GOOD in AX.
-; Operation:         First checks if the sign has been set, and makes it 1
-;                    if NO_SIGN. Then multiplies the value by sign, adds the
-;                    current speed (found via GetMotorSpeed) and
-;                    calls SetMotorSpeed() to set the new motor speed. Finally 
-;                    returns PARSER_GOOD in AX.
+;                    PARSER_GOOD in AX. Handles overflows gracefully.
+; Operation:         First checks the sign. It adds or subtracts, depending on 
+;                    the sign, the current speed (found via GetMotorSpeed).
+;                    Checks for overflow and sets value to MAX_TOTAL_SPEED
+;                    if the value was too big in addition, and 0 if the value
+;                    went negative. Then calls SetMotorSpeed() to set the new 
+;                    motor speed. Finally returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
 ; Return Value:      PARSER_GOOD (AX) - success status of parser.
@@ -565,29 +566,33 @@ SetRelSpeedGetCurrentSpeed:
         JNE    SetRelPositiveSpeed   ; Otherwise add values.
 
 SetRelNegativeSpeed:
-        SUB     AX, BX
-        JNC     DoSetRelSpeed
-        JC      SetRelSpeedTruncate
+        SUB     AX, BX               ; If the sign is negative, perform
+        JNC     DoSetRelSpeed        ; a subtraction and check for unsigned
+        JC      SetRelSpeedTruncate  ; overflow (which would indicate a
+                                     ; negative value).
         
 SetRelPositiveSpeed:
-        ADD     AX, BX
-        ;JNC    CheckNoSpeedChangeValue
-        JC      SetRelSpeedOverflow
+        ADD     AX, BX                  ; If the sign is positive, perform
+        ;JNC    CheckNoSpeedChangeValue ; and addition and check for unsigned
+        JC      SetRelSpeedOverflow     ; overflow, which indicates that the
+                                        ; value is too big.
 
 CheckNoSpeedChangeValue:
-        CMP     AX, NO_SPEED_CHANGE  ; This should
-        JNE     DoSetRelSpeed
-        ;JE     SetRelSpeedOverflow
+        CMP     AX, NO_SPEED_CHANGE  ; The max unsigned speed value is reserved 
+        JNE     DoSetRelSpeed        ; for NO_SPEED_CHANGE, which indicates that
+        ;JE     SetRelSpeedOverflow  ; no speed change should be made. Since
+                                     ; the CF will not catch this, we need to 
+                                     ; check manually.
         
 SetRelSpeedOverflow:
-        MOV     AX, MAX_TOTAL_SPEED  ; If overflow, gracefully max out
+        MOV     AX, MAX_TOTAL_SPEED  ; If overflow, or the result was 
+        JMP     DoSetRelSpeed        ; NO_SPEED_CHANGE, gracefully max out
                                      ; the speed argument to SetMotorSpeed.
-        JMP     DoSetRelSpeed                                     
-                                                                          
+                                                                                 
 SetRelSpeedTruncate:
         MOV     AX, 0                ; Truncate new absolute speed to 0, so
-                                     ; the Trike will stop.
-        ;JMP    DoSetRelSpeed
+                                     ; the Trike will stop if the result was
+        ;JMP    DoSetRelSpeed        ; negative.
         
 DoSetRelSpeed:        
         MOV     BX, NO_ANGLE_CHANGE  ; Set angle argument to SetMotorSpeed.

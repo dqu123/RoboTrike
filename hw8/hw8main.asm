@@ -9,12 +9,26 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Description:      This program tests the parser functions for Homework #8.
+;                   First it initializes the chip select and parser shared
+;                   variables. Then it calls the ParseTest function to test the
+;                   parser with various strings.
 ;
 ; Input:            None.
-; Output:           Motor functions are called, changing the motor speed
-;                   and direction.
+; Output:           None.
 ;
-; User Interface:   SerialPutChar is called with many different strings.
+; User Interface:   SerialPutChar is called with many 37 different path strings.
+;                   Each path is a sequence of commands to test various error
+;                   and command input conditions. The user can set breakpoints
+;                   at hw8test.compareok and hw8test.miscompare to determine
+;                   whether a path is working and check the hw8test.path
+;                   against the hw8.test.exppathX to test path number X. The
+;                   registers at the two breakpoints give information about
+;                   the test status. BX gives the zero indexed path number
+;                   DI is 64H if the paths match, and indicates the number of 
+;                   the first misaligned path character. The details of the
+;                   path encoding are given at  
+;                   http://wolverine.caltech.edu/eecs51/homework/hw8/hw8test.htm
+;                   along with path information.
 ; Error Handling:   None.
 ;
 ; Algorithms:       None.
@@ -26,9 +40,9 @@
 ; Revision History:
 ;    11/25/15  David Qu	               initial revision
 ;    11/26/15  David Qu                added InitParser call
+;    11/27/15  David Qu                updated commments
 
 ; local include files
-
 
 CGROUP  GROUP   CODE
 
