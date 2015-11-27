@@ -1234,7 +1234,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(READ_E_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
-    ;Current State = READ_LASER_STATE        Input Token Type
+    ;Current State = READ_LASER_STATE            Input Token Type
     %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_DIGIT
     %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_SIGN
     %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_S_CMD
@@ -1247,7 +1247,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(READ_LASER_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_OTHER
     
-    ;Current State = S_SIGN_STATE           Input Token Type
+    ;Current State = S_SIGN_STATE            Input Token Type
     %TRANSITION(S_DIGIT_STATE, AddDigit)     ;TOKEN_DIGIT
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_SIGN
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_S_CMD
