@@ -338,18 +338,23 @@ PerformAddition:
         ;JNO   AddDigitNoOverflow         
  
 AddDigitNoOverflow:
-        MOV     value, AX
-        JMP     AddDigitParserGood
+        MOV     value, AX           ; If no overflow, just update the value, 
+        JMP     AddDigitParserGood  ; and return PARSER_GOOD.
 
 AddDigitCheckOverflow:
-        CMP     sign, -1                ; First see if sign is negative
-        ;JE     AddDigitCheckMaxNegative
-        JNE     AddDigitOverflow
+        CMP     sign, -1                 ; First see if sign is negative. There
+        ;JE     AddDigitCheckMaxNegative ; is the special negative case of
+        JNE     AddDigitOverflow         ; 32768, since that is a valid signed
+                                         ; value. Since we accumulate a positive
+                                         ; value and check for signed overflow,
+                                         ; this case will register as
+                                         ; a signed overflow as well.
         
 AddDigitCheckMinNegative:
-        CMP     AX, 32768
-        JE      AddDigitMinNegative
-        ;JNE    AddDigitOverflow
+        CMP     AX, 32768            ; Check if magnitude is the minimum allowed
+        JE      AddDigitMinNegative  ; signed value. (And negative sign). This
+        ;JNE    AddDigitOverflow     ; is a special case because it causes an
+                                     ; overflow since
         
 AddDigitOverflow:
         MOV     value, MAX_SIGNED_VALUE ; Handle overflow gracefully by
@@ -357,7 +362,6 @@ AddDigitOverflow:
                                         ; to the MAX_SIGNED_VALUE.
 AddDigitMinNegative:
         MOV     value, 32768
-        MOV     sign, 1
         ;JMP    AddDigitParserGood
 
 AddDigitParserGood:
