@@ -301,11 +301,11 @@ PerformAddition:
                                 ; digit.
         ADD     AX, BX          ; Add in the next digit 
         JO     AddDigitCheckOverflow ; and check for overflow.
-        ;JNO   AddDigitNoOverflow 
-        
+        ;JNO   AddDigitNoOverflow         
+ 
 AddDigitNoOverflow:
         MOV     value, AX
-        JMP     EndAddDigit
+        JMP     AddDigitParserGood
 
 AddDigitCheckOverflow:
         CMP     sign, -1                ; First see if sign is negative
@@ -313,21 +313,30 @@ AddDigitCheckOverflow:
         JNE     AddDigitOverflow
         
 AddDigitCheckMinNegative:
-        MOV     value, 32768
         CMP     AX, 32768
-        JE      EndAddDigit
+        JE      AddDigitMinNegative
         ;JNE    AddDigitOverflow
         
 AddDigitOverflow:
         MOV     value, MAX_SIGNED_VALUE ; Handle overflow gracefully by
-        ;JMP    EndAddDigit             ; just setting value (which is a magnitude)
+        JMP     AddDigitParserError     ; just setting value (which is a magnitude)
                                         ; to the MAX_SIGNED_VALUE.
-        
-        
-EndAddDigit:        
+AddDigitMinNegative:
+        MOV     value, 32768
+        MOV     sign, 1
+        ;JMP    AddDigitParserGood
+
+AddDigitParserGood:
         MOV     AX, PARSER_GOOD  ; Always returns a good status
                                  ; since the parser will continue in a
-                                 ; potentially valid path.
+                                 ; potential path if no overflow.
+        JMP     EndAddDigit
+
+AddDigitParserError:
+        MOV     AX, PARSER_ERROR
+        ;JMP    EndAddDigit
+        
+EndAddDigit:        
                 
         RET
 
@@ -1043,7 +1052,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(READ_T_STATE, InitParser)    ;TOKEN_T_CMD
     %TRANSITION(READ_E_STATE, InitParser)    ;TOKEN_E_CMD
     %TRANSITION(READ_LASER_STATE, FireLaser) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
+    %TRANSITION(RESET_STATE, DoNOP) ;TOKEN_END_CMD
     %TRANSITION(RESET_STATE, DoNOP)          ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
