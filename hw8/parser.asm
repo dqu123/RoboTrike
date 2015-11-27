@@ -311,15 +311,18 @@ GetParserToken  ENDP
 ; AddDigit(tkn_val)
 ; 
 ; Description:       Sets the value shared variable according to the passed
-;                    tkn_val (AL). Builds up value on digit at a time. Note 
-;                    that this function is always called in transitions that
-;                    have PARSER_GOOD status. Thus, even if there is an overflow,
-;                    it must be handled gracefully. In this case, overflows
-;                    automatically set value to the MAX_SIGNED_VALUE.
+;                    tkn_val (AL). Builds up value on digit at a time. Returns
+;                    PARSER_GOOD status if no overflow occurs and PARSER_ERROR
+;                    if an unexpected overflow occured. The only expected
+;                    overflow is the case of -32768.
 ; Operation:         First computes value = 10 * value and checks for overflow. 
 ;                    Then if no overflow, adds the new digit to value and checks 
-;                    for overflow again. If either overflow occurs, value is set 
-;                    to MAX_SIGNED_VALUE.
+;                    for overflow again. If overflow occurs, first check the
+;                    sign to see if could possibly be the -32768 case. If the
+;                    sign is negative, compare value (AX) with 32768 and
+;                    return PARSER_GOOD if value = 32768 and sign = -1. For
+;                    all other overflows return PARSER_ERROR. If no overflow,
+;                    return PARSER_GOOD.
 ;                    
 ; Arguments:         tkn_val (AL) - token value for action.
 ; Return Value:      PARSER_GOOD (AX) - success status of parser.
@@ -341,7 +344,9 @@ GetParserToken  ENDP
 ;                    initialized properly.
 ;
 ; Registers Changed: flags, AX, BX.
-; Special notes:     None.
+; Special notes:     The case of -32768 is a special case because it causes
+;                    overflow even though it is still a valid value for some
+;                    parser commands. We manually consider this case.
 AddDigit        PROC     NEAR
                 
         IMUL    BX, value, 10       ; Multiply the current value by 10
@@ -574,7 +579,7 @@ SetAbsSpeed     ENDP
 ;                    it should be truncated to zero, and the RoboTrike should
 ;                    be halted. Additionally, this state is always considered
 ;                    the end of a valid parser path, so overflows are handled
-;                    gracefully by setting value to MAX_SIGNED_VALUE.
+;                    gracefully by setting value to MAX_TOTAL_SPEED.
 SetRelSpeed     PROC     NEAR
                 
 
