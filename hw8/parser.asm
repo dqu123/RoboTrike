@@ -321,58 +321,48 @@ GetParserToken  ENDP
 ; Limitations:       Assumes that the parser shared variables have been
 ;                    initialized properly.
 ;
-; Registers Changed: flags, AX, BS.
+; Registers Changed: flags, AX, BX.
 ; Special notes:     None.
 AddDigit        PROC     NEAR
                 
-        IMUL    BX, value, 10    ; Multiply the current value by 10
-        JO      AddDigitOverflow ; and check for overflow. (Seeing another
-        ;JNO    PerformAddition  ; digit means we need to shift all our
-                                 ; decimal digits left).
+        IMUL    BX, value, 10       ; Multiply the current value by 10
+        JO      AddDigitParserError ; and check for overflow. (Seeing another
+        ;JNO    PerformAddition     ; digit means we need to shift all our
+                                    ; decimal digits left).
         
 PerformAddition:        
         XOR     AH, AH          ; Clear out token type to perform word addition with
                                 ; digit.
-        ADD     AX, BX          ; Add in the next digit 
-        JO     AddDigitCheckOverflow ; and check for overflow.
-        ;JNO   AddDigitNoOverflow         
- 
-AddDigitNoOverflow:
-        MOV     value, AX           ; If no overflow, just update the value, 
-        JMP     AddDigitParserGood  ; and return PARSER_GOOD.
+        ADD     AX, BX          ; Add in the next digit
+        MOV     value, AX       ; and update value.
+        ;JO     AddDigitCheckOverflow ; and check for overflow.
+        JNO    AddDigitParserGood     ; If no overflow, we are good, so just
+                                      ; return PARSER_GOOD.
 
 AddDigitCheckOverflow:
         CMP     sign, -1                 ; First see if sign is negative. There
-        ;JE     AddDigitCheckMaxNegative ; is the special negative case of
-        JNE     AddDigitOverflow         ; 32768, since that is a valid signed
+        ;JE     AddDigitCheckMinNegative ; is the special negative case of
+        JNE     AddDigitParserError      ; 32768, since that is a valid signed
                                          ; value. Since we accumulate a positive
                                          ; value and check for signed overflow,
                                          ; this case will register as
-                                         ; a signed overflow as well.
-        
+                                         ; a signed overflow.
+                                         
 AddDigitCheckMinNegative:
         CMP     AX, 32768            ; Check if magnitude is the minimum allowed
-        JE      AddDigitMinNegative  ; signed value. (And negative sign). This
-        ;JNE    AddDigitOverflow     ; is a special case because it causes an
-                                     ; overflow since
-        
-AddDigitOverflow:
-        MOV     value, MAX_SIGNED_VALUE ; Handle overflow gracefully by
-        JMP     AddDigitParserError     ; just setting value (which is a magnitude)
-                                        ; to the MAX_SIGNED_VALUE.
-AddDigitMinNegative:
-        MOV     value, 32768
-        ;JMP    AddDigitParserGood
-
+        ;JE     AddDigitParserGood   ; signed value. (And negative sign). This
+        JNE     AddDigitParserError  ; is a special case because it causes an
+                                     ; overflow even though it is a valid
+                                     ; command (for example "V-32768").
+                                       
 AddDigitParserGood:
-        MOV     AX, PARSER_GOOD  ; Always returns a good status
-                                 ; since the parser will continue in a
-                                 ; potential path if no overflow.
+        MOV     AX, PARSER_GOOD  ; Returns a good status if the parser will 
+                                 ; continue in a valid path with no overflow.
         JMP     EndAddDigit
 
 AddDigitParserError:
-        MOV     AX, PARSER_ERROR
-        ;JMP    EndAddDigit
+        MOV     AX, PARSER_ERROR ; Returns a bad status if there is unexpected
+        ;JMP    EndAddDigit      ; signed overflow.
         
 EndAddDigit:        
                 
