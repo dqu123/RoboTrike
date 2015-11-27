@@ -818,7 +818,8 @@ EndParserSetTurretEle:
 
 ParserSetTurretEle ENDP
 
-; FireLaser(tkn_val)
+
+; WriteLaser(tkn_val)
 ; 
 ; Description:       Fires the RoboTrike laser if the token value is TRUE.
 ;                    Is only called after a correctly parsed string sees the 
@@ -831,7 +832,7 @@ ParserSetTurretEle ENDP
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
-; Shared Variables:  Reads laser - laser value from token.
+; Shared Variables:  Writes to laser - whether or not to fire the laser.
 ; Global Variables:  None.
 ;
 ; Input:             None.
@@ -851,7 +852,8 @@ ParserSetTurretEle ENDP
 WriteLaser       PROC     NEAR
                 
 DoWriteLaser:
-        MOV     laser, AL
+        MOV     laser, AL           ; Write to laser shared variable according
+                                    ; to token value.
         
 EndWriteLaser:                
         MOV     AX, PARSER_GOOD     ; Return parser status through AX.
@@ -860,16 +862,16 @@ EndWriteLaser:
 WriteLaser       ENDP
 
 
-; FireLaser(tkn_val)
+; FireLaser()
 ; 
 ; Description:       Fires the RoboTrike laser if the token value is TRUE.
 ;                    Is only called after a correctly parsed string sees the 
 ;                    TOKEN_END_CMD token, so returns PARSER_GOOD in AX.
-; Operation:         Calls SetLaser(Tkn_val) to fire the laser according to the
-;                    token value. Finally returns PARSER_GOOD in AX.
+; Operation:         Loads laser in AX and calls SetLaser(AX) to fire the laser 
+;                    according to the laser shared variable. 
+;                    Finally returns PARSER_GOOD in AX.
 ;
-; Arguments:         tkn_val (AL) - Value of laser command token. TRUE if laser
-;                                   needs to be fired, and FALSE otherwise.
+; Arguments:         None.
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
@@ -893,15 +895,16 @@ WriteLaser       ENDP
 FireLaser       PROC     NEAR
                 
 DoFireLaser:
-        MOV     AL, laser
-        CBW
-        CALL    SetLaser            ; Set laser according to token value.
+        MOV     AL, laser           ; Load laser shared variable (byte) into
+        CBW                         ; AX using CBW to convert to word.
+        CALL    SetLaser            ; Set laser according to shared variable.
         
 EndFireLaser:                
         MOV     AX, PARSER_GOOD     ; Return parser status through AX.
         RET                         ; This is returned by ParseSerialChar.
 
 FireLaser       ENDP
+
 
 ; DoNOP()
 ; 
@@ -937,6 +940,7 @@ DoNOP           PROC     NEAR
         RET     ; This is returned by ParseSerialChar.
 
 DoNOP          ENDP       
+       
        
 ; Token Tables
 ;
