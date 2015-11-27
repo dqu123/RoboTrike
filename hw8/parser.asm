@@ -27,7 +27,8 @@
 ; SetDirection()       - sets direction of the RoboTrike.
 ; RotateTurret()       - rotates turret of the RoboTrike.
 ; ParserSetTurretEle() - sets turret elevation angle.
-; FireLaser(tkn_val)   - fires the laser based on the token value.
+; WriteLaser(tkn_val)  - sets the laser shared variable based on the token value.
+; FireLaser()          - fires the laser based on the shared variable.
 ; DoNOP()              - returns PARSER_GOOD.
 ; 
 ; Read only tables:
@@ -48,6 +49,7 @@
 ; Revision History:
 ; 		11/25/15  David Qu		initial revision.
 ;       11/26/15  David Qu      implemented commands.
+;       11/27/15  David Qu      fixed error handling and overflow issues.
 
 ; Parser Design Overview:
 ; Features: Mealy FSM, Paths for each command, Graceful overflow, special case:
@@ -103,7 +105,7 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: None.
+; Registers Changed: AX.
 ; Special notes:     None.
 InitParser      PROC     NEAR
                 PUBLIC   InitParser
@@ -536,43 +538,40 @@ SetAbsSpeed     ENDP
 ;                    gracefully by setting value to MAX_SIGNED_VALUE.
 SetRelSpeed     PROC     NEAR
                 
-        CMP     sign, NO_SIGN           ; First check if sign token was seen.
-        JNE     SetRelSpeedValue        ; If so, the sign has been set.
-        ;JE     SetRelSpeedDefaultSign  ; Otherwise the sign needs to be set.
-        
-SetRelSpeedDefaultSign:
-        MOV     sign, 1              ; Default sign is positive.
- 
-SetRelSpeedValue:
-        MOV     AL, sign            ; Multiply value by sign to get the signed
-        CBW                         ; representation of value in AX, which is
-        MOV     BX, value           ; the speed argument to SetMotorSpeed.
-        IMUL    BX                  ; Note that we must convert sign to a word
-                                    ; since value is a word (use CBW).
-       
-        MOV     BX, AX               ; Save value before calling GetMotorSpeed.
+
+SetRelSpeedGetCurrentSpeed:
+        MOV     BX, value            ; Store relative value in register
         CALL    GetMotorSpeed        ; Get current motor speed in AX.
         
-        ADD     AX, BX               ; Compute the new absolute speed based on 
-                                     ; the relative speed in the command.
-        JNO     SetRelSpeedCheckTruncate ; Check for overflow.
-        ;JO     SetRelSpeedOverflow
+        CMP     sign, -1             ; First check if sign token is negative.
+        ;JE     SetRelNegativeSpeed  ; If so, subtract values.
+        JNE    SetRelPositiveSpeed   ; Otherwise add values.
+
+SetRelNegativeSpeed:
+        SUB     AX, BX
+        JNC     DoSetRelSpeed
+        JC      SetRelSpeedTruncate
+        
+SetRelPositiveSpeed:
+        ADD     AX, BX
+        ;JNC    CheckNoSpeedChangeValue
+        JC      SetRelSpeedOverflow
+
+CheckNoSpeedChangeValue:
+        CMP     AX, NO_SPEED_CHANGE  ; This should
+        JNE     DoSetRelSpeed
+        ;JE     SetRelSpeedOverflow
         
 SetRelSpeedOverflow:
         MOV     AX, MAX_TOTAL_SPEED  ; If overflow, gracefully max out
                                      ; the speed argument to SetMotorSpeed.
         JMP     DoSetRelSpeed                                     
-                                     
-SetRelSpeedCheckTruncate:            
-        CMP     AX, 0                ; If new abolute speed < 0, then truncate
-        JGE     DoSetRelSpeed        ; to 0. This is part of the specification
-        ;JL     SetRelSpeedTruncate  ; and assumes the user doesn't want to change
-                                     ; direction, and only magnitude.
-                                     
+                                                                          
 SetRelSpeedTruncate:
         MOV     AX, 0                ; Truncate new absolute speed to 0, so
                                      ; the Trike will stop.
-                                     
+        ;JMP    DoSetRelSpeed
+        
 DoSetRelSpeed:        
         MOV     BX, NO_ANGLE_CHANGE  ; Set angle argument to SetMotorSpeed.
                                      ; This value indicates that the angle should
@@ -792,6 +791,47 @@ EndParserSetTurretEle:
 
 ParserSetTurretEle ENDP
 
+; FireLaser(tkn_val)
+; 
+; Description:       Fires the RoboTrike laser if the token value is TRUE.
+;                    Is only called after a correctly parsed string sees the 
+;                    TOKEN_END_CMD token, so returns PARSER_GOOD in AX.
+; Operation:         Calls SetLaser(Tkn_val) to fire the laser according to the
+;                    token value. Finally returns PARSER_GOOD in AX.
+;
+; Arguments:         tkn_val (AL) - Value of laser command token. TRUE if laser
+;                                   needs to be fired, and FALSE otherwise.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads laser - laser value from token.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: flags, AX.
+; Special notes:     None.
+WriteLaser       PROC     NEAR
+                
+DoWriteLaser:
+        MOV     laser, AL
+        
+EndWriteLaser:                
+        MOV     AX, PARSER_GOOD     ; Return parser status through AX.
+        RET                         ; This is returned by ParseSerialChar.
+
+WriteLaser       ENDP
+
 
 ; FireLaser(tkn_val)
 ; 
@@ -806,8 +846,7 @@ ParserSetTurretEle ENDP
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
-; Shared Variables:  Reads value - value being built up
-;                    Reads sign  - flag for optional sign token
+; Shared Variables:  Reads laser - laser value from token.
 ; Global Variables:  None.
 ;
 ; Input:             None.
@@ -827,6 +866,8 @@ ParserSetTurretEle ENDP
 FireLaser       PROC     NEAR
                 
 DoFireLaser:
+        MOV     AL, laser
+        CBW
         CALL    SetLaser            ; Set laser according to token value.
         
 EndFireLaser:                
@@ -1055,17 +1096,17 @@ TRANSITION_ENTRY      ENDS
 StateTable	LABEL	TRANSITION_ENTRY
     
     ;Current State = RESET_STATE             Input Token Type
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_DIGIT
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_SIGN
-    %TRANSITION(READ_S_STATE, InitParser)    ;TOKEN_S_CMD
-    %TRANSITION(READ_V_STATE, InitParser)    ;TOKEN_V_CMD
-    %TRANSITION(READ_D_STATE, InitParser)    ;TOKEN_D_CMD
-    %TRANSITION(READ_T_STATE, InitParser)    ;TOKEN_T_CMD
-    %TRANSITION(READ_E_STATE, InitParser)    ;TOKEN_E_CMD
-    %TRANSITION(READ_LASER_STATE, FireLaser) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, DoNOP)          ;TOKEN_END_CMD
-    %TRANSITION(RESET_STATE, DoNOP)          ;TOKEN_WHITE_SPACE
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_DIGIT
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_SIGN
+    %TRANSITION(READ_S_STATE, InitParser)     ;TOKEN_S_CMD
+    %TRANSITION(READ_V_STATE, InitParser)     ;TOKEN_V_CMD
+    %TRANSITION(READ_D_STATE, InitParser)     ;TOKEN_D_CMD
+    %TRANSITION(READ_T_STATE, InitParser)     ;TOKEN_T_CMD
+    %TRANSITION(READ_E_STATE, InitParser)     ;TOKEN_E_CMD
+    %TRANSITION(READ_LASER_STATE, WriteLaser) ;TOKEN_LASER_CMD
+    %TRANSITION(RESET_STATE, DoNOP)           ;TOKEN_END_CMD
+    %TRANSITION(RESET_STATE, DoNOP)           ;TOKEN_WHITE_SPACE
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_OTHER
     
     ;Current State = READ_S_STATE            Input Token Type
     %TRANSITION(S_DIGIT_STATE, AddDigit)     ;TOKEN_DIGIT
@@ -1141,7 +1182,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_T_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, InitParser)     ;TOKEN_END_CMD
+    %TRANSITION(RESET_STATE, FireLaser)      ;TOKEN_END_CMD
     %TRANSITION(READ_LASER_STATE, DoNOP)     ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
@@ -1281,6 +1322,7 @@ CODE    ENDS
 ; Parser shared variables.
 DATA    SEGMENT PUBLIC  'DATA'
     state           DB  ?   ; current FSM state.
+    laser           DB  ?   ; whether to fire the laser.
     value           DW  ?   ; value built up by parsing digit tokens.
     sign            DB  ?   ; sign of value. signals if the optional sign token
                             ; has been included or not. Starts as NO_SIGN, and
