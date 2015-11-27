@@ -620,6 +620,8 @@ SetRelSpeed     ENDP
 ; Operation:         First checks if the sign has been set. If not, then
 ;                    sets sign = 1. Then sets value = value * sign + GetMotorDirection()
 ;                    because value is treated as a relative direction.
+;                    Note that we compute value * sign MOD 360 before adding
+;                    the current direction to avoid overflow. 
 ;                    Finally calls SetMotorSpeed(NO_SPEED_CHANGE, value)
 ;                    to change the Robotrike direction and returns PARSER_GOOD in AX.
 ;
@@ -661,7 +663,7 @@ SetDirectionValue:
         IMUL    BX                  ; Note that we must convert sign to a word
                                     ; since value is a word (use CBW).
        
-SetDirectionOverflow:                ; Prevent overflow by MODing value by 360.
+SetDirectionOverflow:                ; Prevent overflow by MODing value by 360 degrees.
         MOV     BX, 360              ; Compute angle MOD 360 to prevent overflow 
                                      ; when adding the current angle.
         CWD                          ; Perform MOD by signed division, so need to

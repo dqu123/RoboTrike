@@ -17,6 +17,7 @@
 ;
 ; Revision History:
 ;	 11/25/15  David Qu			initial revision
+;    11/27/15  David Qu         added SIGN_STATES
 
 ; Return values for ParseSerialChar (PSC)
 PARSER_GOOD             EQU     0       ; Return value for a good call to PSC.
