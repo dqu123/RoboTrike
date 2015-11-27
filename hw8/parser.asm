@@ -28,6 +28,7 @@
 ; RotateTurret()       - rotates turret of the RoboTrike.
 ; ParserSetTurretEle() - sets turret elevation angle.
 ; FireLaser(tkn_val)   - fires the laser based on the token value.
+; DoNOP()              - returns PARSER_GOOD.
 ; 
 ; Read only tables:
 ; TokenTypeTable      - table of token types (see parser.inc for definitions)
@@ -75,11 +76,15 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ; InitParser()
 ; 
 ; Description:       Initializes the state, value, and sign shared variables.  
-;                    Must be run before ParseSerialChar can be called.     
-; Operation:         Sets state = RESET_STATE, value = 0, and sign = NO_SIGN
+;                    Must be run before ParseSerialChar can be called.
+;                    Returns PARSER_GOOD in AX because it is also used to
+;                    reset state in the FSM.     
+; Operation:         Sets state = RESET_STATE, value = 0, and sign = NO_SIGN.
+;                    Returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
-; Return Value:      None.
+; Return Value:      PARSER_GOOD in AX since this always starts a new potentially
+;                    valid command path.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Writes to state   - current state in FSM
@@ -112,7 +117,7 @@ InitParser      PROC     NEAR
         MOV     sign, NO_SIGN       ; The NO_SIGN value indicates that no sign
                                     ; token has been seen yet.
         
-        MOV     AL, PARSER_GOOD  ; Always returns a good status
+        MOV     AX, PARSER_GOOD  ; Always returns a good status
                                  ; since the parser will continue in a
                                  ; potentially valid path.     
         RET
@@ -133,7 +138,7 @@ InitParser      ENDP
 ;                    the status value from the ACTION function.
 ;
 ; Arguments:         char (AL) - character from serial to parse.
-; Return Value:      return_status (AL) - status value indicating whether or not
+; Return Value:      return_status (AX) - status value indicating whether or not
 ;                                    the call was valid / successful.
 ;
 ; Local Variables:   token_value (AL) - value of the token for action function
@@ -161,7 +166,7 @@ InitParser      ENDP
 ; Special notes:     None.
 ParseSerialChar PROC     NEAR
                 PUBLIC   ParseSerialChar
-                
+
 GetNextToken:                
         CALL    GetParserToken      ; Convert from char to token_value (AL),
                                     ; token_type (AH)
@@ -183,14 +188,14 @@ DoAction:                                ; do the actions
                                          ; by action.
         CALL    CS:StateTable[BX].ACTION ; do action, which returns the
                                          ; status of the action (PARSER_GOOD or
-                                         ; PARSER_ERROR) in AL.
+                                         ; PARSER_ERROR) in AX.
         
 DoTransition:                                   ; go to next state
         POP     BX                              ; Restore index.
         MOV     CL, CS:StateTable[BX].NEXTSTATE ; Get new state,
         MOV     state, CL                       ; and update shared variable.
-
-        RET     ; Returns PARSER_GOOD or PARSER_ERROR depending on action.
+        
+        RET     ; Returns PARSER_GOOD or PARSER_ERROR in AX depending on action.
 
 ParseSerialChar ENDP
 
@@ -264,7 +269,7 @@ GetParserToken  ENDP
 ;                    to MAX_SIGNED_VALUE.
 ;                    
 ; Arguments:         tkn_val (AL) - token value for action.
-; Return Value:      PARSER_GOOD (AL) - success status of parser.
+; Return Value:      PARSER_GOOD (AX) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Read/Writes to value - value being built up
@@ -295,13 +300,24 @@ PerformAddition:
         XOR     AH, AH          ; Clear out token type to perform word addition with
                                 ; digit.
         ADD     AX, BX          ; Add in the next digit 
-        JO     AddDigitOverflow ; and check for overflow.
+        JO     AddDigitCheckOverflow ; and check for overflow.
         ;JNO   AddDigitNoOverflow 
         
 AddDigitNoOverflow:
         MOV     value, AX
         JMP     EndAddDigit
 
+AddDigitCheckOverflow:
+        CMP     sign, -1                ; First see if sign is negative
+        ;JE     AddDigitCheckMaxNegative
+        JNE     AddDigitOverflow
+        
+AddDigitCheckMinNegative:
+        MOV     value, 32768
+        CMP     AX, 32768
+        JE      EndAddDigit
+        ;JNE    AddDigitOverflow
+        
 AddDigitOverflow:
         MOV     value, MAX_SIGNED_VALUE ; Handle overflow gracefully by
         ;JMP    EndAddDigit             ; just setting value (which is a magnitude)
@@ -309,7 +325,7 @@ AddDigitOverflow:
         
         
 EndAddDigit:        
-        MOV     AL, PARSER_GOOD  ; Always returns a good status
+        MOV     AX, PARSER_GOOD  ; Always returns a good status
                                  ; since the parser will continue in a
                                  ; potentially valid path.
                 
@@ -323,10 +339,10 @@ AddDigit        ENDP
 ; Description:       Sets the sign shared variable according to the passed
 ;                    tkn_val (AL). This function is only called as part of
 ;                    transition from SIGN states to DIGIT states.
-; Operation:         Sets sign = tkn_val.
+; Operation:         Sets sign = tkn_val, and then returns PARSER_GOOD in AX.
 ;
 ; Arguments:         tkn_val (AL) - token value for action.
-; Return Value:      PARSER_GOOD (AL) - success status of parser.
+; Return Value:      PARSER_GOOD (AX) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Writes to sign - flag for option sign token
@@ -344,7 +360,7 @@ AddDigit        ENDP
 ; Limitations:       Assumes that the parser shared variables have been
 ;                    initialized properly.
 ;
-; Registers Changed: AL.
+; Registers Changed: AX.
 ; Special notes:     None.
 SetSign         PROC     NEAR
                 
@@ -353,7 +369,7 @@ SetSign         PROC     NEAR
                            ; is simply 1 for + and -1 for -, and represents
                            ; the sign value.
                            
-        MOV     AL, PARSER_GOOD  ; Always returns a good status
+        MOV     AX, PARSER_GOOD  ; Always returns a good status
                                  ; since the parser will continue in a
                                  ; potentially valid path.
         RET
@@ -364,11 +380,11 @@ SetSign         ENDP
 ; GetParserError()
 ; 
 ; Description:       This function is only called when an error occurs and
-;                    returns PARSER_ERROR.
-; Operation:         Returns PARSER_ERROR.
+;                    returns PARSER_ERROR in AX.
+; Operation:         Returns PARSER_ERROR in AX.
 ;
 ; Arguments:         None.
-; Return Value:      Parser status (AL) - the status of ParseSerialChar, which
+; Return Value:      Parser status (AX) - the status of ParseSerialChar, which
 ;                                         is always PARSER_ERROR if ParserError
 ;                                         is called.
 ;
@@ -388,11 +404,11 @@ SetSign         ENDP
 ; Limitations:       Assumes that the parser shared variables have been
 ;                    initialized properly.
 ;
-; Registers Changed: AL.
+; Registers Changed: AX.
 ; Special notes:     None.
 GetParserError  PROC     NEAR
                 
-        MOV     AL, PARSER_ERROR    ; Return error status through AL.
+        MOV     AX, PARSER_ERROR    ; Return error status through AX.
         RET                         ; This is returned by ParseSerialChar.
 
 GetParserError  ENDP
@@ -407,10 +423,10 @@ GetParserError  ENDP
 ; Operation:         First checks if the sign has been set, and makes it 1
 ;                    if NO_SIGN. Then multiplies the value by sign, and
 ;                    calls SetMotorSpeed() to set the absolute motor speed.
-;                    Finally returns PARSER_GOOD in AL.
+;                    Finally returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
-; Return Value:      PARSER_GOOD (AL) - success status of parser.
+; Return Value:      PARSER_GOOD (AX) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Reads value - value being built up
@@ -441,11 +457,11 @@ SetAbsSpeedDefaultSign:
         MOV     sign, 1             ; Default sign is positive.
  
 DoSetAbsSpeed:
-        MOV     AX, value           ; Multiply value by sign to get the signed
-        XOR     DX, DX              ; representation of value in AX, which is
-        MOV     BL, sign            ; the speed argument to SetMotorSpeed.
-        XOR     BH, BH              ; Note that we must convert sign to a word
-        IMUL    BX                  ; since value is a word.
+        MOV     AL, sign            ; Multiply value by sign to get the signed
+        CBW                         ; representation of value in AX, which is
+        MOV     BX, value           ; the speed argument to SetMotorSpeed.
+        IMUL    BX                  ; Note that we must convert sign to a word
+                                    ; since value is a word (use CBW).
                                     
         MOV     BX, NO_ANGLE_CHANGE ; Set angle argument to SetMotorSpeed.
                                     ; This value indicates that the angle should
@@ -455,7 +471,7 @@ DoSetAbsSpeed:
                                     ; speed.
         
 EndSetAbsSpeed:                
-        MOV     AL, PARSER_GOOD     ; Return parser status through AL.
+        MOV     AX, PARSER_GOOD     ; Return parser status through AX.
         RET                         ; This is returned by ParseSerialChar.
 
 SetAbsSpeed     ENDP
@@ -466,15 +482,15 @@ SetAbsSpeed     ENDP
 ; Description:       Sets the relative speed of the RoboTrike based on the
 ;                    shared variables. Is only called after a correctly
 ;                    parsed string reaches the TOKEN_END_CMD token, so returns
-;                    PARSER_GOOD in AL.
+;                    PARSER_GOOD in AX.
 ; Operation:         First checks if the sign has been set, and makes it 1
 ;                    if NO_SIGN. Then multiplies the value by sign, adds the
 ;                    current speed (found via GetMotorSpeed) and
 ;                    calls SetMotorSpeed() to set the new motor speed. Finally 
-;                    returns PARSER_GOOD in AL.
+;                    returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
-; Return Value:      PARSER_GOOD (AL) - success status of parser.
+; Return Value:      PARSER_GOOD (AX) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Reads value - value being built up
@@ -510,11 +526,11 @@ SetRelSpeedDefaultSign:
         MOV     sign, 1              ; Default sign is positive.
  
 SetRelSpeedValue:
-        MOV     AX, value            ; Multiply value by sign to get the signed
-        XOR     DX, DX               ; representation of value in AX, which corresponds
-        MOV     BL, sign             ; to the speed argument to SetMotorSpeed.
-        XOR     BH, BH               ; Note that we must convert sign to a word
-        IMUL    BX                   ; since value is a word.
+        MOV     AL, sign            ; Multiply value by sign to get the signed
+        CBW                         ; representation of value in AX, which is
+        MOV     BX, value           ; the speed argument to SetMotorSpeed.
+        IMUL    BX                  ; Note that we must convert sign to a word
+                                    ; since value is a word (use CBW).
        
         MOV     BX, AX               ; Save value before calling GetMotorSpeed.
         CALL    GetMotorSpeed        ; Get current motor speed in AX.
@@ -548,7 +564,7 @@ DoSetRelSpeed:
                                      ; computed from the relative speed.
         
 EndSetRelSpeed:                
-        MOV     AL, PARSER_GOOD      ; Return parser status through AL.
+        MOV     AX, PARSER_GOOD      ; Return parser status through AX.
         RET                          ; This is returned by ParseSerialChar.
 
 SetRelSpeed     ENDP
@@ -559,12 +575,12 @@ SetRelSpeed     ENDP
 ; Description:       Sets the relative direction of the RoboTrike based on the
 ;                    shared variables. Is only called after a correctly
 ;                    parsed string reaches the TOKEN_END_CMD token, so returns
-;                    PARSER_GOOD in AL.
+;                    PARSER_GOOD in AX.
 ; Operation:         First checks if the sign has been set. If not, then
 ;                    sets sign = 1. Then sets value = value * sign + GetMotorDirection()
 ;                    because value is treated as a relative direction.
 ;                    Finally calls SetMotorSpeed(NO_SPEED_CHANGE, value)
-;                    to change the Robotrike direction and returns PARSER_GOOD in AL.
+;                    to change the Robotrike direction and returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
 ; Return Value:      None.
@@ -598,21 +614,23 @@ SetDirectionDefaultSign:
         MOV     sign, 1              ; Default sign is positive.
  
 SetDirectionValue:
-        MOV     AX, value            ; Multiply value by sign to get the signed
-        XOR     DX, DX               ; representation of value in AX, which corresponds
-        MOV     BL, sign             ; to the angle argument to SetMotorSpeed.
-        XOR     BH, BH               ; Note that we must convert sign to a word
-        IMUL    BX                   ; since value is a word.
+        MOV     AL, sign            ; Multiply value by sign to get the signed
+        CBW                         ; representation of value in AX, which is
+        MOV     BX, value           ; the speed argument to SetMotorSpeed.
+        IMUL    BX                  ; Note that we must convert sign to a word
+                                    ; since value is a word (use CBW).
        
 SetDirectionOverflow:                ; Prevent overflow by MODing value by 360.
         MOV     BX, 360              ; Compute angle MOD 360 to prevent overflow 
                                      ; when adding the current angle.
         CWD                          ; Perform MOD by signed division, so need to
-        IDIV    BX                   ; set DX to sign extend AX.        
+        IDIV    BX                   ; set DX to sign extend AX. The resulting
+                                     ; mod is in DX.
+        MOV     BX, DX               ; Move to BX because SetMotorSpeed takes
+                                     ; the angle in BX.
         
 SetDirectionAbsAngle:                ; Compute the absolute angle
-        MOV     BX, AX               ; Save value before calling GetMotorDirection.
-        CALL    GetMotorDirection    ; Get current motor direction in BX.
+        CALL    GetMotorDirection    ; Get current motor direction in AX.
         ADD     BX, AX               ; Compute new absolute direction based on
                                      ; relative angle passed by command.
 
@@ -625,7 +643,7 @@ DoSetDirection:
                                      ; computed from the relative speed.
         
 EndSetDirection:                
-        MOV     AL, PARSER_GOOD      ; Return parser status through AL.
+        MOV     AX, PARSER_GOOD      ; Return parser status through AX.
         RET                          ; This is returned by ParseSerialChar.
 
 SetDirection    ENDP
@@ -636,12 +654,12 @@ SetDirection    ENDP
 ; Description:       Rotates the turret of the RoboTrike based on the
 ;                    shared variables. Is only called after a correctly
 ;                    parsed string reaches the TOKEN_END_CMD token, so returns
-;                    PARSER_GOOD in AL.
+;                    PARSER_GOOD in AX.
 ; Operation:         First checks if the sign has been set. If not, then
 ;                    simply calls SetTurretAngle(value) to set the absolute
 ;                    turret angle. If the sign has been set, sets value *= sign, 
 ;                    and then sets the relative angle using SetRelTurretAngle(value).
-;                    Finally returns PARSER_GOOD in AL.
+;                    Finally returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
 ; Return Value:      None.
@@ -679,17 +697,18 @@ DoRotateTurretAbsolute:             ; Treat value as an absolute angle
         CALL    SetTurretAngle      ; and set the new turret angle.
         JMP     EndRotateTurret
  
-DoRotateTurretRelative:             ; Multiply value by sign to get the signed
-        XOR     DX, DX              ; representation of value in AX, which is
-        MOV     BL, sign            ; the angle argument to SetRelTurretAngle.
-        XOR     BH, BH              ; Note that we must convert sign to a word
-        IMUL    BX                  ; since value is a word.
+DoRotateTurretRelative:             
+        MOV     AL, sign            ; Multiply value by sign to get the signed
+        CBW                         ; representation of value in AX, which is
+        MOV     BX, value           ; the speed argument to SetMotorSpeed.
+        IMUL    BX                  ; Note that we must convert sign to a word
+                                    ; since value is a word (use CBW).
                                   
         CALL    SetRelTurretAngle   ; Set turret new relative turret angle.
         ;JMP    EndRotateTurret
         
 EndRotateTurret:                
-        MOV     AL, PARSER_GOOD     ; Return parser status through AL.
+        MOV     AX, PARSER_GOOD     ; Return parser status through AX.
         RET                         ; This is returned by ParseSerialChar.
 
 RotateTurret    ENDP
@@ -700,11 +719,11 @@ RotateTurret    ENDP
 ; Description:       Sets the turret elevation of the RoboTrike based on the
 ;                    shared variables. Is only called after a correctly
 ;                    parsed string reaches the TOKEN_END_CMD token, so returns
-;                    PARSER_GOOD in AL.
+;                    PARSER_GOOD in AX.
 ; Operation:         First checks if the sign has been set. If not, then
 ;                    sets sign = 1. Then sets value *= sign, and 
 ;                    and sets the absolute angle using SetTurretElevation(value).
-;                    Finally returns PARSER_GOOD in AL.
+;                    Finally returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
 ; Return Value:      None.
@@ -738,17 +757,17 @@ ParserSetTurretEleDefaultSign:
         MOV     sign, 1             ; Default sign is positive.
  
 DoParserSetTurretEle:
-        MOV     AX, value           ; Multiply value by sign to get the signed
-        XOR     DX, DX              ; representation of value in AX, which is
-        MOV     BL, sign            ; the angle argument to SetTurretElevation.
-        XOR     BH, BH              ; Note that we must convert sign to a word
-        IMUL    BX                  ; since value is a word.
+        MOV     AL, sign            ; Multiply value by sign to get the signed
+        CBW                         ; representation of value in AX, which is
+        MOV     BX, value           ; the speed argument to SetMotorSpeed.
+        IMUL    BX                  ; Note that we must convert sign to a word
+                                    ; since value is a word (use CBW).
                                     
         CALL    SetTurretElevation  ; Set the turret evlevation with the new absolute
                                     ; elevation.
         
 EndParserSetTurretEle:                
-        MOV     AL, PARSER_GOOD     ; Return parser status through AL.
+        MOV     AX, PARSER_GOOD     ; Return parser status through AX.
         RET                         ; This is returned by ParseSerialChar.
 
 ParserSetTurretEle ENDP
@@ -758,9 +777,9 @@ ParserSetTurretEle ENDP
 ; 
 ; Description:       Fires the RoboTrike laser if the token value is TRUE.
 ;                    Is only called after a correctly parsed string sees the 
-;                    TOKEN_END_CMD token, so returns PARSER_GOOD in AL.
+;                    TOKEN_END_CMD token, so returns PARSER_GOOD in AX.
 ; Operation:         Calls SetLaser(Tkn_val) to fire the laser according to the
-;                    token value. Finally returns PARSER_GOOD in AL.
+;                    token value. Finally returns PARSER_GOOD in AX.
 ;
 ; Arguments:         tkn_val (AL) - Value of laser command token. TRUE if laser
 ;                                   needs to be fired, and FALSE otherwise.
@@ -783,7 +802,7 @@ ParserSetTurretEle ENDP
 ; Limitations:       Assumes that the parser shared variables have been
 ;                    initialized properly.
 ;
-; Registers Changed: flags, AL.
+; Registers Changed: flags, AX.
 ; Special notes:     None.
 FireLaser       PROC     NEAR
                 
@@ -791,11 +810,45 @@ DoFireLaser:
         CALL    SetLaser            ; Set laser according to token value.
         
 EndFireLaser:                
-        MOV     AL, PARSER_GOOD     ; Return parser status through AL.
+        MOV     AX, PARSER_GOOD     ; Return parser status through AX.
         RET                         ; This is returned by ParseSerialChar.
 
 FireLaser       ENDP
-       
+
+; DoNOP()
+; 
+; Description:       Used to handle whitespace, which is just ignored. Returns 
+;                    PARSER_GOOD in AX.
+; Operation:         Returns PARSER_GOOD in AX.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads value - value being built up
+;                    Reads sign  - flag for optional sign token
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       Assumes that the parser shared variables have been
+;                    initialized properly.
+;
+; Registers Changed: AX.
+; Special notes:     None.
+DoNOP           PROC     NEAR
+                
+        MOV     AX, PARSER_GOOD  ; Return PARSER_GOOD.
+        RET     ; This is returned by ParseSerialChar.
+
+DoNOP          ENDP       
        
 ; Token Tables
 ;
@@ -818,7 +871,7 @@ FireLaser       ENDP
         %TABENT(TOKEN_OTHER, 6)		;ACK
         %TABENT(TOKEN_OTHER, 7)		;BEL
         %TABENT(TOKEN_OTHER, 8)		;backspace
-        %TABENT(TOKEN_OTHER, 9)		;TAB
+        %TABENT(TOKEN_WHITE_SPACE, 9) ;TAB (ignored)
         %TABENT(TOKEN_OTHER, 10)	;new line
         %TABENT(TOKEN_OTHER, 11)	;vertical tab
         %TABENT(TOKEN_OTHER, 12)	;form feed
@@ -841,7 +894,7 @@ FireLaser       ENDP
         %TABENT(TOKEN_OTHER, 29)	;GS
         %TABENT(TOKEN_OTHER, 30)	;AS
         %TABENT(TOKEN_OTHER, 31)	;US
-        %TABENT(TOKEN_OTHER, ' ')	;space
+        %TABENT(TOKEN_WHITE_SPACE, ' ')	;space (ignored)
         %TABENT(TOKEN_OTHER, '!')	;!
         %TABENT(TOKEN_OTHER, '"')	;"
         %TABENT(TOKEN_OTHER, '#')	;#
@@ -991,6 +1044,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(READ_E_STATE, InitParser)    ;TOKEN_E_CMD
     %TRANSITION(READ_LASER_STATE, FireLaser) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
+    %TRANSITION(RESET_STATE, DoNOP)          ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = READ_S_STATE            Input Token Type
@@ -1003,6 +1057,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
+    %TRANSITION(READ_S_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = READ_V_STATE            Input Token Type
@@ -1015,6 +1070,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
+    %TRANSITION(READ_V_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = READ_D_STATE            Input Token Type
@@ -1027,6 +1083,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
+    %TRANSITION(READ_D_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER 
     
     ;Current State = READ_T_STATE            Input Token Type
@@ -1039,6 +1096,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
+    %TRANSITION(READ_T_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER   
     
     ;Current State = READ_E_STATE            Input Token Type
@@ -1051,6 +1109,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
+    %TRANSITION(READ_E_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = READ_LASER_STATE        Input Token Type
@@ -1063,6 +1122,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, InitParser)     ;TOKEN_END_CMD
+    %TRANSITION(READ_LASER_STATE, DoNOP)     ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = S_DIGIT_STATE           Input Token Type
@@ -1075,6 +1135,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, SetAbsSpeed)    ;TOKEN_END_CMD
+    %TRANSITION(S_DIGIT_STATE, DoNOP)        ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = V_DIGIT_STATE           Input Token Type
@@ -1087,6 +1148,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, SetRelSpeed)    ;TOKEN_END_CMD
+    %TRANSITION(V_DIGIT_STATE, DoNOP)        ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = D_DIGIT_STATE           Input Token Type
@@ -1099,6 +1161,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, SetDirection)   ;TOKEN_END_CMD
+    %TRANSITION(D_DIGIT_STATE, DoNOP)        ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = T_DIGIT_STATE           Input Token Type
@@ -1111,6 +1174,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, RotateTurret)   ;TOKEN_END_CMD
+    %TRANSITION(T_DIGIT_STATE, DoNOP)        ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = E_DIGIT_STATE               Input Token Type
@@ -1123,6 +1187,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, ParserSetTurretEle) ;TOKEN_END_CMD
+    %TRANSITION(E_DIGIT_STATE, DoNOP)            ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_OTHER
     
 CODE    ENDS

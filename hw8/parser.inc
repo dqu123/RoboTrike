@@ -32,10 +32,11 @@ TOKEN_D_CMD             EQU     4       ; token is a "S" or "s" command.
 TOKEN_T_CMD             EQU     5       ; token is a "S" or "s" command.
 TOKEN_E_CMD             EQU     6       ; token is a "S" or "s" command.
 TOKEN_LASER_CMD         EQU     7       ; token is a "F", "f", "O", or "o" command.
-TOKEN_END_CMD           EQU     8       ; token is Carriage Return (<Return>)
-TOKEN_OTHER             EQU     9       ; anything else
+TOKEN_END_CMD           EQU     8       ; token is Carriage Return (<Return>).
+TOKEN_WHITE_SPACE       EQU     9       ; token is white space (ignore).
+TOKEN_OTHER             EQU     10      ; anything else.
 
-NUM_TOKEN_TYPES         EQU     10      ; number of token types
+NUM_TOKEN_TYPES         EQU     11      ; number of token types
 
 ; Token values
 NO_SIGN                 EQU     0       ; Default no sign value.
@@ -54,10 +55,10 @@ READ_T_STATE            EQU     4       ; just read "T"
 READ_E_STATE            EQU     5       ; just read "E"
 READ_LASER_STATE        EQU     6       ; just read "F" or "O"
 S_DIGIT_STATE           EQU     7       ; just read digit token after "S"
-V_DIGIT_STATE           EQU     8       ; just read digit token after "S"
-D_DIGIT_STATE           EQU     9       ; just read digit token after "S"
-T_DIGIT_STATE           EQU     10      ; just read digit token after "S"
-E_DIGIT_STATE           EQU     11      ; just read digit token after "S"
+V_DIGIT_STATE           EQU     8       ; just read digit token after "V"
+D_DIGIT_STATE           EQU     9       ; just read digit token after "D"
+T_DIGIT_STATE           EQU     10      ; just read digit token after "T"
+E_DIGIT_STATE           EQU     11      ; just read digit token after "E"
 
 NUM_STATES              EQU     12      ; number of states
 

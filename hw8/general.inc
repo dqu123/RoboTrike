@@ -17,3 +17,4 @@ FALSE               EQU     0       ; Boolean false value.
 
 ; Processor size dependent values
 MAX_SIGNED_VALUE    EQU     32767   ; Maximum signed 16-bit value.
+MIN_SIGNED_VALUE    EQU     32768   ; Minimum signed 16-bit value.

@@ -39,6 +39,7 @@ CODE    SEGMENT PUBLIC 'CODE'
 
 
 ; external function declarations
+        EXTRN   InitCS:NEAR             ;initialize chip select
         EXTRN   InitParser:NEAR         ;initialize shared variables
 		EXTRN   ParseTest:NEAR          ;tests parser behavior.
 
@@ -51,7 +52,9 @@ MAIN:
 
         MOV     AX, DATA                ;initialize the data segment
         MOV     DS, AX
-
+        
+        CALL    InitCS                  ;initialize chip select.
+        
         CALL    InitParser              ;initialize parser shared varibles,
                                         ;so the parser will start in the
                                         ;RESET_STATE.
