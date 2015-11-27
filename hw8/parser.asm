@@ -29,7 +29,7 @@
 ; ParserSetTurretEle() - sets turret elevation angle.
 ; WriteLaser(tkn_val)  - sets the laser shared variable based on the token value.
 ; FireLaser()          - fires the laser based on the shared variable.
-; DoNOP()              - returns PARSER_GOOD.
+; GetParserGood()      - returns PARSER_GOOD.
 ; 
 ; Read only tables:
 ; TokenTypeTable      - table of token types (see parser.inc for definitions)
@@ -924,7 +924,7 @@ EndFireLaser:
 FireLaser       ENDP
 
 
-; DoNOP()
+; GetParserGood()
 ; 
 ; Description:       Used to handle whitespace, which is just ignored. Returns 
 ;                    PARSER_GOOD in AX.
@@ -952,12 +952,12 @@ FireLaser       ENDP
 ;
 ; Registers Changed: AX.
 ; Special notes:     None.
-DoNOP           PROC     NEAR
+GetParserGood   PROC     NEAR
                 
         MOV     AX, PARSER_GOOD  ; Return PARSER_GOOD.
         RET     ; This is returned by ParseSerialChar.
 
-DoNOP          ENDP       
+GetParserGood   ENDP       
        
        
 ; Token Tables
@@ -1153,8 +1153,8 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(READ_T_STATE, InitParser)     ;TOKEN_T_CMD
     %TRANSITION(READ_E_STATE, InitParser)     ;TOKEN_E_CMD
     %TRANSITION(READ_LASER_STATE, WriteLaser) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, DoNOP)           ;TOKEN_END_CMD
-    %TRANSITION(RESET_STATE, DoNOP)           ;TOKEN_WHITE_SPACE
+    %TRANSITION(RESET_STATE, GetParserGood)   ;TOKEN_END_CMD
+    %TRANSITION(RESET_STATE, GetParserGood)   ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_OTHER
     
     ;Current State = READ_S_STATE            Input Token Type
@@ -1167,7 +1167,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
-    %TRANSITION(READ_S_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
+    %TRANSITION(READ_S_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = READ_V_STATE            Input Token Type
@@ -1180,7 +1180,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
-    %TRANSITION(READ_V_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
+    %TRANSITION(READ_V_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = READ_D_STATE            Input Token Type
@@ -1193,7 +1193,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
-    %TRANSITION(READ_D_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
+    %TRANSITION(READ_D_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER 
     
     ;Current State = READ_T_STATE            Input Token Type
@@ -1206,7 +1206,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
-    %TRANSITION(READ_T_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
+    %TRANSITION(READ_T_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER   
     
     ;Current State = READ_E_STATE            Input Token Type
@@ -1219,21 +1219,21 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
-    %TRANSITION(READ_E_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
+    %TRANSITION(READ_E_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = READ_LASER_STATE        Input Token Type
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_DIGIT
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_SIGN
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_S_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_V_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_D_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_T_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, FireLaser)      ;TOKEN_END_CMD
-    %TRANSITION(READ_LASER_STATE, DoNOP)     ;TOKEN_WHITE_SPACE
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
+    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_DIGIT
+    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_SIGN
+    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_S_CMD
+    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_V_CMD
+    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_D_CMD
+    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_T_CMD
+    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_E_CMD
+    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_LASER_CMD
+    %TRANSITION(RESET_STATE, FireLaser)          ;TOKEN_END_CMD
+    %TRANSITION(READ_LASER_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
+    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_OTHER
     
     ;Current State = S_SIGN_STATE           Input Token Type
     %TRANSITION(S_DIGIT_STATE, AddDigit)     ;TOKEN_DIGIT
@@ -1245,7 +1245,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
-    %TRANSITION(S_SIGN_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
+    %TRANSITION(S_SIGN_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = V_SIGN_STATE            Input Token Type
@@ -1258,7 +1258,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
-    %TRANSITION(V_SIGN_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
+    %TRANSITION(V_SIGN_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = D_SIGN_STATE            Input Token Type
@@ -1270,8 +1270,8 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_T_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_END_CMD
-    %TRANSITION(D_SIGN_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
+    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
+    %TRANSITION(D_SIGN_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = T_SIGN_STATE            Input Token Type
@@ -1283,25 +1283,12 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_T_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, GetParserError)   ;TOKEN_END_CMD
-    %TRANSITION(T_SIGN_STATE, DoNOP)         ;TOKEN_WHITE_SPACE
+    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
+    %TRANSITION(T_SIGN_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
-    ;Current State = E_SIGN_STATE                Input Token Type
-    %TRANSITION(E_DIGIT_STATE, AddDigit)         ;TOKEN_DIGIT
-    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_SIGN
-    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_S_CMD
-    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_V_CMD
-    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_D_CMD
-    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_T_CMD
-    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_E_CMD
-    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_END_CMD
-    %TRANSITION(E_SIGN_STATE, DoNOP)             ;TOKEN_WHITE_SPACE
-    %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_OTHER
-    
-    ;Current State = S_DIGIT_STATE           Input Token Type
-    %TRANSITION(S_DIGIT_STATE, AddDigit)     ;TOKEN_DIGIT
+    ;Current State = E_SIGN_STATE            Input Token Type
+    %TRANSITION(E_DIGIT_STATE, AddDigit)     ;TOKEN_DIGIT
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_SIGN
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_S_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_V_CMD
@@ -1309,48 +1296,61 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_T_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, SetAbsSpeed)    ;TOKEN_END_CMD
-    %TRANSITION(S_DIGIT_STATE, DoNOP)        ;TOKEN_WHITE_SPACE
+    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_END_CMD
+    %TRANSITION(E_SIGN_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
-    ;Current State = V_DIGIT_STATE           Input Token Type
-    %TRANSITION(V_DIGIT_STATE, AddDigit)     ;TOKEN_DIGIT
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_SIGN
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_S_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_V_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_D_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_T_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, SetRelSpeed)    ;TOKEN_END_CMD
-    %TRANSITION(V_DIGIT_STATE, DoNOP)        ;TOKEN_WHITE_SPACE
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
+    ;Current State = S_DIGIT_STATE            Input Token Type
+    %TRANSITION(S_DIGIT_STATE, AddDigit)      ;TOKEN_DIGIT
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_SIGN
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_S_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_V_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_D_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_T_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_E_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_LASER_CMD
+    %TRANSITION(RESET_STATE, SetAbsSpeed)     ;TOKEN_END_CMD
+    %TRANSITION(S_DIGIT_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_OTHER
     
-    ;Current State = D_DIGIT_STATE           Input Token Type
-    %TRANSITION(D_DIGIT_STATE, AddDigit)     ;TOKEN_DIGIT
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_SIGN
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_S_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_V_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_D_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_T_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, SetDirection)   ;TOKEN_END_CMD
-    %TRANSITION(D_DIGIT_STATE, DoNOP)        ;TOKEN_WHITE_SPACE
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
+    ;Current State = V_DIGIT_STATE            Input Token Type
+    %TRANSITION(V_DIGIT_STATE, AddDigit)      ;TOKEN_DIGIT
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_SIGN
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_S_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_V_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_D_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_T_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_E_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_LASER_CMD
+    %TRANSITION(RESET_STATE, SetRelSpeed)     ;TOKEN_END_CMD
+    %TRANSITION(V_DIGIT_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_OTHER
     
-    ;Current State = T_DIGIT_STATE           Input Token Type
-    %TRANSITION(T_DIGIT_STATE, AddDigit)     ;TOKEN_DIGIT
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_SIGN
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_S_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_V_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_D_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_T_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, RotateTurret)   ;TOKEN_END_CMD
-    %TRANSITION(T_DIGIT_STATE, DoNOP)        ;TOKEN_WHITE_SPACE
-    %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
+    ;Current State = D_DIGIT_STATE            Input Token Type
+    %TRANSITION(D_DIGIT_STATE, AddDigit)      ;TOKEN_DIGIT
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_SIGN
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_S_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_V_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_D_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_T_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_E_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_LASER_CMD
+    %TRANSITION(RESET_STATE, SetDirection)    ;TOKEN_END_CMD
+    %TRANSITION(D_DIGIT_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_OTHER
+    
+    ;Current State = T_DIGIT_STATE            Input Token Type
+    %TRANSITION(T_DIGIT_STATE, AddDigit)      ;TOKEN_DIGIT
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_SIGN
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_S_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_V_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_D_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_T_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_E_CMD
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_LASER_CMD
+    %TRANSITION(RESET_STATE, RotateTurret)    ;TOKEN_END_CMD
+    %TRANSITION(T_DIGIT_STATE, GetParserGood) ;TOKEN_WHITE_SPACE
+    %TRANSITION(RESET_STATE, GetParserError)  ;TOKEN_OTHER
     
     ;Current State = E_DIGIT_STATE               Input Token Type
     %TRANSITION(E_DIGIT_STATE, AddDigit)         ;TOKEN_DIGIT
@@ -1362,7 +1362,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_LASER_CMD
     %TRANSITION(RESET_STATE, ParserSetTurretEle) ;TOKEN_END_CMD
-    %TRANSITION(E_DIGIT_STATE, DoNOP)            ;TOKEN_WHITE_SPACE
+    %TRANSITION(E_DIGIT_STATE, GetParserGood)    ;TOKEN_WHITE_SPACE
     %TRANSITION(RESET_STATE, GetParserError)     ;TOKEN_OTHER
     
 CODE    ENDS
