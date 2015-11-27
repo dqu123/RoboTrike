@@ -501,7 +501,7 @@ GetParserError  ENDP
 ; Limitations:       Assumes that the parser shared variables have been
 ;                    initialized properly.
 ;
-; Registers Changed: flags, AX, BX, DX.
+; Registers Changed: flags, AX, BX.
 ; Special notes:     None.
 SetAbsSpeed     PROC     NEAR
                 
@@ -568,7 +568,7 @@ SetAbsSpeed     ENDP
 ; Limitations:       Assumes that the parser shared variables have been
 ;                    initialized properly.
 ;
-; Registers Changed: flags, AX, BX, DX.
+; Registers Changed: flags, AX, BX.
 ; Special notes:     The specification states that if after adding the the 
 ;                    specified relative speed, the resulting speed is negative,
 ;                    it should be truncated to zero, and the RoboTrike should
@@ -745,7 +745,7 @@ SetDirection    ENDP
 ; Limitations:       Assumes that the parser shared variables have been
 ;                    initialized properly.
 ;
-; Registers Changed: flags, AX, BX, DX.
+; Registers Changed: flags, AX, BX.
 ; Special notes:     The specification states that if the sign token is present
 ;                    a relative angle should be set. Otherwise an absolute
 ;                    angle is set.
@@ -809,7 +809,7 @@ RotateTurret    ENDP
 ; Limitations:       Assumes that the parser shared variables have been
 ;                    initialized properly.
 ;
-; Registers Changed: flags, AX, BX, DX.
+; Registers Changed: flags, AX, BX.
 ; Special notes:     None.
 ParserSetTurretEle PROC     NEAR
                 
