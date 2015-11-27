@@ -68,6 +68,12 @@
 ; whether to fire the laser or not, and both F and O tokens have the same
 ; type. Note that case is ignored so lowercase values are allowed.
 ;
+; Parser Status:
+;     ParserSerialChar returns a status: PARSER_GOOD if the action was
+;     successful and PARSER_ERROR if not sucessful. This status is indicated 
+;     by the action functions which MUST return either PARSER_GOOD or
+;     PARSER_ERROR. ParseSerialChar also uses this status in error handling.
+;
 ; Error handling: 
 ;    The parser handles errors in two ways. First there are standard transitions
 ;    in the state machine that lead to the RESET_STATE while signaling an
@@ -80,6 +86,8 @@
 ;    resulting in aborting the command. Overflow errors in set relative speed
 ;    are handled gracefully by zeroing or maxing out as appropriate. Other
 ;    potential overflow errors should be handled by the actual motor functions.
+;    Most motor functions are simply called with an absolute value so the overflow 
+;    checking is mainly in AddDigit in those cases (such as SetAbsSpeed).
 
 ;local include files. 
 $INCLUDE(general.inc)  ; General constants.
@@ -175,8 +183,8 @@ InitParser      ENDP
 ;                    the status value from the ACTION function.
 ;
 ; Arguments:         char (AL) - character from serial to parse.
-; Return Value:      return_status (AX) - status value indicating whether or not
-;                                    the call was valid / successful.
+; Return Value:      parser_status (AX) - PARSER_GOOD or PARSER_ERROR depending
+;                                         on if an error happened or not.
 ;
 ; Local Variables:   token_value (AL) - value of the token for action function
 ;                    token_type  (AH) - type of token to determine state transition
@@ -325,7 +333,8 @@ GetParserToken  ENDP
 ;                    return PARSER_GOOD.
 ;                    
 ; Arguments:         tkn_val (AL) - token value for action.
-; Return Value:      PARSER_GOOD (AX) - success status of parser.
+; Return Value:      parser_status (AX) - PARSER_GOOD or PARSER_ERROR depending
+;                                         on if an error happened or not.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Read/Writes to value - value being built up
@@ -446,7 +455,7 @@ SetSign         ENDP
 ;
 ; Arguments:         None.
 ; Return Value:      Parser status (AX) - the status of ParseSerialChar, which
-;                                         is always PARSER_ERROR if ParserError
+;                                         is always PARSER_ERROR if GetParserError
 ;                                         is called.
 ;
 ; Local Variables:   None.
@@ -478,16 +487,14 @@ GetParserError  ENDP
 ; SetAbsSpeed()
 ; 
 ; Description:       Sets the absolute speed of the RoboTrike based on the
-;                    shared variables. Is only called after a correctly
-;                    parsed string reaches the TOKEN_END_CMD token, so returns
-;                    PARSER_GOOD.
-; Operation:         First checks if the sign has been set, and makes it 1
-;                    if NO_SIGN. Then multiplies the value by sign, and
-;                    calls SetMotorSpeed() to set the absolute motor speed.
-;                    Finally returns PARSER_GOOD in AX.
+;                    shared variables. 
+; Operation:         First checks if the sign is -1 and returns PARSER_ERROR
+;                    if it is. Otherwise calls SetMotorSpeed() to set the absolute 
+;                    motor speed and returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
-; Return Value:      PARSER_GOOD (AX) - success status of parser.
+; Return Value:      parser_status (AX) - PARSER_GOOD or PARSER_ERROR depending
+;                                         on if an error happened or not.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Reads value - value being built up
@@ -652,7 +659,7 @@ SetRelSpeed     ENDP
 ;                    to change the Robotrike direction and returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
-; Return Value:      None.
+; Return Value:      PARSER_GOOD (AX) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Reads value - value being built up
@@ -731,7 +738,7 @@ SetDirection    ENDP
 ;                    Finally returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
-; Return Value:      None.
+; Return Value:      PARSER_GOOD (AX) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Reads value - value being built up
@@ -795,7 +802,7 @@ RotateTurret    ENDP
 ;                    Finally returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
-; Return Value:      None.
+; Return Value:      PARSER_GOOD (AX) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Reads value - value being built up
@@ -852,7 +859,7 @@ ParserSetTurretEle ENDP
 ;
 ; Arguments:         tkn_val (AL) - Value of laser command token. TRUE if laser
 ;                                   needs to be fired, and FALSE otherwise.
-; Return Value:      None.
+; Return Value:      PARSER_GOOD (AX) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Writes to laser - whether or not to fire the laser.
@@ -895,7 +902,7 @@ WriteLaser       ENDP
 ;                    Finally returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
-; Return Value:      None.
+; Return Value:      PARSER_GOOD (AX) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Reads laser - laser value from token.
@@ -936,7 +943,7 @@ FireLaser       ENDP
 ; Operation:         Returns PARSER_GOOD in AX.
 ;
 ; Arguments:         None.
-; Return Value:      None.
+; Return Value:      PARSER_GOOD (AX) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Reads value - value being built up
