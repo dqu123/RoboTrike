@@ -41,6 +41,7 @@
 ;
 ; Shared Variables: 
 ;    state  DB  - current FSM state.
+;    laser  DB  - whether to fire the laser or not.
 ;    value  DW  - value built up by parsing digit tokens.
 ;    sign   DB  - sign of value. signals if the optional sign token has been 
 ;                 included or not. Starts as NO_SIGN, and becomes 1, or -1 
@@ -54,6 +55,17 @@
 ; Parser Design Overview:
 ; Features: Mealy FSM, Paths for each command, Graceful overflow, special case:
 ; laser.
+; This parser implements a Mealy Finite State Machine by treating character
+; inputs as tokens with token values and token types, and maintaining a state
+; shared variable. The possible token types and token values can be seen in the
+; TokenTypeTable and TokenValueTable, which are generated using macros. 
+; Each combination of state and token leads to one of the
+; transitions describe in the StateTable. Specifically, in our case there is
+; a transition path for each of the S, V, D, T, and E commands, and a special
+; LASER transition path for the F and O commands. By transition path, I mean
+; that seeing a "S" token leads to a READ_S_STATE that can only go to
+; a S_SIGN_STATE, and S_DIGIT_STATE. This isolates the 
+; Overflow: 
 
 ;local include files. 
 $INCLUDE(general.inc)  ; General constants.
@@ -78,7 +90,8 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ; InitParser()
 ; 
 ; Description:       Initializes the state, value, and sign shared variables.  
-;                    Must be run before ParseSerialChar can be called.
+;                    Must be run before ParseSerialChar can be called because
+;                    the state must be initialized to RESET_STATE.
 ;                    Returns PARSER_GOOD in AX because it is also used to
 ;                    reset state in the FSM.     
 ; Operation:         Sets state = RESET_STATE, value = 0, and sign = NO_SIGN.
@@ -106,7 +119,8 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ; Limitations:       None.
 ;
 ; Registers Changed: AX.
-; Special notes:     None.
+; Special notes:     The laser shared variable is not written because that
+;                    is set when the laser command tokens are seen.
 InitParser      PROC     NEAR
                 PUBLIC   InitParser
                 
@@ -135,8 +149,10 @@ InitParser      ENDP
 ;                    This is either PARSER_GOOD or PARSER_ERROR.
 ; Operation:         First get the token_value and token_type using GetParserToken().
 ;                    Then, perform the action specified by the state and token_type
-;                    with the token_value as an argument. Finally, update the
-;                    state based on the state and token_type combination. Return
+;                    with the token_value as an argument. Next update the
+;                    state based on the state and token_type combination. Then
+;                    check the status value from the ACTION function. If it is
+;                    PARSER_ERROR, transition to the RESET_STATE instead. Return
 ;                    the status value from the ACTION function.
 ;
 ; Arguments:         char (AL) - character from serial to parse.
@@ -146,9 +162,11 @@ InitParser      ENDP
 ; Local Variables:   token_value (AL) - value of the token for action function
 ;                    token_type  (AH) - type of token to determine state transition
 ;                    index (BX)       - byte index into state table
-; Shared Variables:  Read/Writes to state   - current state in FSM
-;                    Read/Writes to value   - value being built up
-;                    Read/Writes to sign    - flag for optional sign token
+; Shared Variables:  Read/writes to state   - current state in FSM
+;                    Read/writes to value   - value being built up
+;                    Read/writes to sign    - flag for optional sign token
+;                    Read/writes to laser   - whether to fire the laser
+;                    (Most of these read/writes occur in action functions).
 ; Global Variables:  None.
 ;
 ; Input:             None.
@@ -156,7 +174,12 @@ InitParser      ENDP
 ;
 ; Error Handling:    None.
 ;
-; Algorithms:        State Machine.
+; Algorithms:        Mealy Finite State Machine (FSM) - each character received is
+;                    treated as a token, as described in the TokenType and
+;                    TokenValue tables. The function uses the state shared 
+;                    variable to track its state in the FSM and the combination
+;                    of state and token determine the next state and action
+;                    performed. These combinations can be seen in the StateTable.
 ; Data Structures:   StateTable of transition entries, which contain a NEXTSTATE
 ;                    (constant) and an ACTION (function).
 ;
@@ -197,15 +220,15 @@ DoTransition:                                   ; go to next state
         MOV     CL, CS:StateTable[BX].NEXTSTATE ; Get new state,
         MOV     state, CL                       ; and update shared variable.
         
-        CMP     AX, PARSER_ERROR
-        JNE     EndParseSerialChar
-        ;JE     ParseSerialCharError
+        CMP     AX, PARSER_ERROR        ; Check return status of action to
+        JNE     EndParseSerialChar      ; see if we should transition back
+        ;JE     ParseSerialCharError    ; to the reset state instead.
         
 ParseSerialCharError:
-        MOV     state, RESET_STATE
+        MOV     state, RESET_STATE      ; Transition back to RESET_STATE because
+                                        ; an error occurred.
         
 EndParseSerialChar:
-        
         RET     ; Returns PARSER_GOOD or PARSER_ERROR in AX depending on action.
 
 ParseSerialChar ENDP
