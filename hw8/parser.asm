@@ -78,7 +78,8 @@
 ; Overflow cases:
 ;    AddDigit overflows are counted as errors and are signaled to ParseSerialChar
 ;    resulting in aborting the command. Overflow errors in set relative speed
-;    are handled gracefully by zeroing or maxing out as appropriate.
+;    are handled gracefully by zeroing or maxing out as appropriate. Other
+;    potential overflow errors should be handled by the actual motor functions.
 
 ;local include files. 
 $INCLUDE(general.inc)  ; General constants.
