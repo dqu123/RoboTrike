@@ -195,6 +195,15 @@ DoTransition:                                   ; go to next state
         MOV     CL, CS:StateTable[BX].NEXTSTATE ; Get new state,
         MOV     state, CL                       ; and update shared variable.
         
+        CMP     AX, PARSER_ERROR
+        JNE     EndParseSerialChar
+        ;JE     ParseSerialCharError
+        
+ParseSerialCharError:
+        MOV     state, RESET_STATE
+        
+EndParseSerialChar:
+        
         RET     ; Returns PARSER_GOOD or PARSER_ERROR in AX depending on action.
 
 ParseSerialChar ENDP
@@ -550,9 +559,9 @@ SetRelSpeedValue:
         ;JO     SetRelSpeedOverflow
         
 SetRelSpeedOverflow:
-        MOV     AX, MAX_SIGNED_VALUE ; If overflow, gracefully max out
+        MOV     AX, MAX_TOTAL_SPEED  ; If overflow, gracefully max out
                                      ; the speed argument to SetMotorSpeed.
-                                     
+        JMP     DoSetRelSpeed                                     
                                      
 SetRelSpeedCheckTruncate:            
         CMP     AX, 0                ; If new abolute speed < 0, then truncate
@@ -571,10 +580,12 @@ DoSetRelSpeed:
         
         CALL    SetMotorSpeed        ; Set motor speed with the new absolute speed 
                                      ; computed from the relative speed.
-        
+                                     
 EndSetRelSpeed:                
-        MOV     AX, PARSER_GOOD      ; Return parser status through AX.
-        RET                          ; This is returned by ParseSerialChar.
+        MOV     AX, PARSER_GOOD  ; Always returns a good status
+                                 ; since the parser will continue in a
+                                 ; potential path.
+        RET                      ; This is returned by ParseSerialChar.    
 
 SetRelSpeed     ENDP
 
