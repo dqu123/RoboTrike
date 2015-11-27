@@ -504,29 +504,31 @@ GetParserError  ENDP
 ; Special notes:     None.
 SetAbsSpeed     PROC     NEAR
                 
-        CMP     sign, NO_SIGN           ; First check if sign token was seen.
-        JNE     DoSetAbsSpeed           ; If so, the sign has been set.
-        ;JE     SetAbsSpeedDefaultSign  ; Otherwise the sign needs to be set.
-        
-SetAbsSpeedDefaultSign:
-        MOV     sign, 1             ; Default sign is positive.
- 
+        CMP     sign, -1                ; First check if sign token is negative.
+        JE      SetAbsSpeedParserError  ; If so, return an error.
+        ;JNE     DoSetAbsSpeed          ; Otherwise just use value.
+         
 DoSetAbsSpeed:
-        MOV     AL, sign            ; Multiply value by sign to get the signed
-        CBW                         ; representation of value in AX, which is
-        MOV     BX, value           ; the speed argument to SetMotorSpeed.
-        IMUL    BX                  ; Note that we must convert sign to a word
-                                    ; since value is a word (use CBW).
-                                    
+        MOV     AX, value           ; Load new absolute speed in AX.                  
         MOV     BX, NO_ANGLE_CHANGE ; Set angle argument to SetMotorSpeed.
                                     ; This value indicates that the angle should
                                     ; remain the same.
         
         CALL    SetMotorSpeed       ; Set the motor speed with the new absolute
                                     ; speed.
+        ;JMP    SetAbsSpeedParserGood 
+        
+SetAbsSpeedParserGood:
+        MOV     AX, PARSER_GOOD  ; Returns a good status if the parser will 
+                                 ; continue in a valid path with no overflow.
+        JMP     EndSetAbsSpeed
+
+SetAbsSpeedParserError:
+        MOV     AX, PARSER_ERROR ; Returns a bad status if there is unexpected
+        ;JMP    EndSetAbsSpeed   ; negative sign.
         
 EndSetAbsSpeed:                
-        MOV     AX, PARSER_GOOD     ; Return parser status through AX.
+                                    ; Return parser status through AX.
         RET                         ; This is returned by ParseSerialChar.
 
 SetAbsSpeed     ENDP
