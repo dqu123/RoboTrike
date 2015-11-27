@@ -112,6 +112,9 @@ InitParser      PROC     NEAR
         MOV     sign, NO_SIGN       ; The NO_SIGN value indicates that no sign
                                     ; token has been seen yet.
         
+        MOV     AL, PARSER_GOOD  ; Always returns a good status
+                                 ; since the parser will continue in a
+                                 ; potentially valid path.     
         RET
 
 InitParser      ENDP
@@ -176,11 +179,14 @@ ComputeTransition:                  ; figure out what transition to do
 
 DoAction:                                ; do the actions
         MOV     AL, CH                   ; get token value back for actions
+        PUSH    BX                       ; Save index to avoid being written
+                                         ; by action.
         CALL    CS:StateTable[BX].ACTION ; do action, which returns the
                                          ; status of the action (PARSER_GOOD or
                                          ; PARSER_ERROR) in AL.
         
 DoTransition:                                   ; go to next state
+        POP     BX                              ; Restore index.
         MOV     CL, CS:StateTable[BX].NEXTSTATE ; Get new state,
         MOV     state, CL                       ; and update shared variable.
 
@@ -258,7 +264,7 @@ GetParserToken  ENDP
 ;                    to MAX_SIGNED_VALUE.
 ;                    
 ; Arguments:         tkn_val (AL) - token value for action.
-; Return Value:      None.
+; Return Value:      PARSER_GOOD (AL) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Read/Writes to value - value being built up
@@ -286,15 +292,19 @@ AddDigit        PROC     NEAR
                                  ; decimal digits left).
         
 PerformAddition:        
-        XOR     AH, AH      ; Clear out token type to perform word addition with
-                            ; digit.
-        ADD     BX, AX      ; Add in the next digit 
-        ;JO     Overflow    ; and check for overflow.
-        JNO     EndAddDigit
+        XOR     AH, AH          ; Clear out token type to perform word addition with
+                                ; digit.
+        ADD     AX, BX          ; Add in the next digit 
+        JO     AddDigitOverflow ; and check for overflow.
+        ;JNO   AddDigitNoOverflow 
+        
+AddDigitNoOverflow:
+        MOV     value, AX
+        JMP     EndAddDigit
 
 AddDigitOverflow:
         MOV     value, MAX_SIGNED_VALUE ; Handle overflow gracefully by
-                                        ; just setting value (which is a magnitude)
+        ;JMP    EndAddDigit             ; just setting value (which is a magnitude)
                                         ; to the MAX_SIGNED_VALUE.
         
         
@@ -316,7 +326,7 @@ AddDigit        ENDP
 ; Operation:         Sets sign = tkn_val.
 ;
 ; Arguments:         tkn_val (AL) - token value for action.
-; Return Value:      None.
+; Return Value:      PARSER_GOOD (AL) - success status of parser.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Writes to sign - flag for option sign token
@@ -334,7 +344,7 @@ AddDigit        ENDP
 ; Limitations:       Assumes that the parser shared variables have been
 ;                    initialized properly.
 ;
-; Registers Changed: None.
+; Registers Changed: AL.
 ; Special notes:     None.
 SetSign         PROC     NEAR
                 
@@ -342,6 +352,10 @@ SetSign         PROC     NEAR
                            ; SIGN states to DIGIT states, where the tkn_val
                            ; is simply 1 for + and -1 for -, and represents
                            ; the sign value.
+                           
+        MOV     AL, PARSER_GOOD  ; Always returns a good status
+                                 ; since the parser will continue in a
+                                 ; potentially valid path.
         RET
 
 SetSign         ENDP
@@ -865,7 +879,7 @@ FireLaser       ENDP
         %TABENT(TOKEN_OTHER, 'C')	;C
         %TABENT(TOKEN_D_CMD, 'D')	;D (set direction command)
         %TABENT(TOKEN_E_CMD, 'E')   ;E (set turret elevation angle command)
-        %TABENT(TOKEN_LASER_CMD, 'F') ;F (fire laser on command)
+        %TABENT(TOKEN_LASER_CMD, TRUE) ;F (fire laser on command)
         %TABENT(TOKEN_OTHER, 'G')	;G
         %TABENT(TOKEN_OTHER, 'H')	;H
         %TABENT(TOKEN_OTHER, 'I')	;I
@@ -874,7 +888,7 @@ FireLaser       ENDP
         %TABENT(TOKEN_OTHER, 'L')	;L
         %TABENT(TOKEN_OTHER, 'M')	;M
         %TABENT(TOKEN_OTHER, 'N')	;N
-        %TABENT(TOKEN_LASER_CMD, 'O') ;O (laser off command)
+        %TABENT(TOKEN_LASER_CMD, FALSE) ;O (laser off command)
         %TABENT(TOKEN_OTHER, 'P')	;P
         %TABENT(TOKEN_OTHER, 'Q')	;Q
         %TABENT(TOKEN_OTHER, 'R')	;R
@@ -897,7 +911,7 @@ FireLaser       ENDP
         %TABENT(TOKEN_OTHER, 'c')	;c
         %TABENT(TOKEN_D_CMD, 'd')	;d (set direction command)
         %TABENT(TOKEN_E_CMD, 'e')   ;e (set turret elevation angle command)
-        %TABENT(TOKEN_LASER_CMD, 'f') ;f (fire laser on command)
+        %TABENT(TOKEN_LASER_CMD, TRUE) ;f (fire laser on command)
         %TABENT(TOKEN_OTHER, 'g')	;g
         %TABENT(TOKEN_OTHER, 'h')	;h
         %TABENT(TOKEN_OTHER, 'i')	;i
@@ -906,7 +920,7 @@ FireLaser       ENDP
         %TABENT(TOKEN_OTHER, 'l')	;l
         %TABENT(TOKEN_OTHER, 'm')	;m
         %TABENT(TOKEN_OTHER, 'n')	;n
-        %TABENT(TOKEN_LASER_CMD, 'o') ;o (laser off command)
+        %TABENT(TOKEN_LASER_CMD, FALSE) ;o (laser off command)
         %TABENT(TOKEN_OTHER, 'p')	;p
         %TABENT(TOKEN_OTHER, 'q')	;q
         %TABENT(TOKEN_OTHER, 'r')	;r
@@ -1048,7 +1062,7 @@ StateTable	LABEL	TRANSITION_ENTRY
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_T_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_E_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_LASER_CMD
-    %TRANSITION(RESET_STATE, FireLaser)      ;TOKEN_END_CMD
+    %TRANSITION(RESET_STATE, InitParser)     ;TOKEN_END_CMD
     %TRANSITION(RESET_STATE, GetParserError) ;TOKEN_OTHER
     
     ;Current State = S_DIGIT_STATE           Input Token Type
