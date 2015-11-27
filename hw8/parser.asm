@@ -37,7 +37,8 @@
 ; StateTable          - table of state transitions (see parser design overview)
 ;
 ; Note that the token tables are created using macros to avoid having to sync
-; multiple tables.
+; multiple tables. Macros are also used to create the state table to make it
+; more readable.
 ;
 ; Shared Variables: 
 ;    state  DB  - current FSM state.
@@ -53,8 +54,6 @@
 ;       11/27/15  David Qu      fixed error handling and overflow issues.
 
 ; Parser Design Overview:
-; Features: Mealy FSM, Paths for each command, Graceful overflow, special case:
-; laser.
 ; This parser implements a Mealy Finite State Machine by treating character
 ; inputs as tokens with token values and token types, and maintaining a state
 ; shared variable. The possible token types and token values can be seen in the
@@ -64,8 +63,22 @@
 ; a transition path for each of the S, V, D, T, and E commands, and a special
 ; LASER transition path for the F and O commands. By transition path, I mean
 ; that seeing a "S" token leads to a READ_S_STATE that can only go to
-; a S_SIGN_STATE, and S_DIGIT_STATE. This isolates the 
-; Overflow: 
+; a S_SIGN_STATE, and S_DIGIT_STATE. This isolates each command for simple
+; logic. The LASER commands are special in that the token value determines 
+; whether to fire the laser or not, and both F and O tokens have the same
+; type. Note that case is ignored so lowercase values are allowed.
+;
+; Error handling: 
+;    The parser handles errors in two ways. First there are standard transitions
+;    in the state machine that lead to the RESET_STATE while signaling an
+;    error in the return value of ParserSerialChar. Secondly, a function can
+;    signal its error to ParseSerialChar, and it will override the transition
+;    to the RESET_STATE. This reduces the number of states needed. 
+;
+; Overflow cases:
+;    AddDigit overflows are counted as errors and are signaled to ParseSerialChar
+;    resulting in aborting the command. Overflow errors in set relative speed
+;    are handled gracefully by zeroing or maxing out as appropriate.
 
 ;local include files. 
 $INCLUDE(general.inc)  ; General constants.
@@ -120,12 +133,17 @@ CODE 	SEGMENT PUBLIC 'CODE'
 ;
 ; Registers Changed: AX.
 ; Special notes:     The laser shared variable is not written because that
-;                    is set when the laser command tokens are seen.
+;                    is set when the laser command tokens are seen. Note that
+;                    this function is used in two ways (to set up FSM, and to
+;                    reset it when an error happens or after a command occurs).
+;                    The ability to do this is tied to the order of updating
+;                    transitions, and the nature of the parser, so any changes
+;                    should be thoroughly tested.
 InitParser      PROC     NEAR
                 PUBLIC   InitParser
                 
         MOV     state, RESET_STATE  ; Start at reset state, waiting for a
-                                    ; _CMD token.
+                                    ; command token.
         MOV     value, 0            ; Value is the function argument built up digit 
                                     ; by digit from a passed character, so it 
                                     ; MUST start at 0 (or else you will add junk
