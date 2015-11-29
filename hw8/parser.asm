@@ -322,13 +322,15 @@ GetParserToken  ENDP
 ;                    tkn_val (AL). Builds up value on digit at a time. Returns
 ;                    PARSER_GOOD status if no overflow occurs and PARSER_ERROR
 ;                    if an unexpected overflow occured. The only expected
-;                    overflow is the case of -32768.
+;                    overflow is the case of the most negative number, with
+;                    magnitude MAX_NEGATIVE.
 ; Operation:         First computes value = 10 * value and checks for overflow. 
 ;                    Then if no overflow, adds the new digit to value and checks 
 ;                    for overflow again. If overflow occurs, first check the
-;                    sign to see if could possibly be the -32768 case. If the
-;                    sign is negative, compare value (AX) with 32768 and
-;                    return PARSER_GOOD if value = 32768 and sign = -1. For
+;                    sign to see if could possibly be the case of the most negative
+;                    number with magnitude MAX_NEGATIVE. If the
+;                    sign is negative, compare value (AX) with MAX_NEGATIVE and
+;                    return PARSER_GOOD if value = MAX_NEGATIVE and sign = -1. For
 ;                    all other overflows return PARSER_ERROR. If no overflow,
 ;                    return PARSER_GOOD.
 ;                    
@@ -353,9 +355,9 @@ GetParserToken  ENDP
 ;                    initialized properly.
 ;
 ; Registers Changed: flags, AX, BX.
-; Special notes:     The case of -32768 is a special case because it causes
-;                    overflow even though it is still a valid value for some
-;                    parser commands. We manually consider this case.
+; Special notes:     The case of value = MAX_NEGATIVE, sign = -1 is special 
+;                    because it causes 0overflow even though it is still a valid 
+;                    value for some parser commands. We manually consider this case.
 AddDigit        PROC     NEAR
                 
         IMUL    BX, value, 10       ; Multiply the current value by 10
@@ -369,24 +371,24 @@ PerformAddition:
         ADD     AX, BX          ; Add in the next digit
         MOV     value, AX       ; and update value.
         ;JO     AddDigitCheckOverflow ; and check for overflow.
-        JNO    AddDigitParserGood     ; If no overflow, we are good, so just
+        JNO     AddDigitParserGood    ; If no overflow, we are good, so just
                                       ; return PARSER_GOOD.
 
 AddDigitCheckOverflow:
         CMP     sign, -1                 ; First see if sign is negative. There
         ;JE     AddDigitCheckMinNegative ; is the special negative case of
-        JNE     AddDigitParserError      ; 32768, since that is a valid signed
+        JNE     AddDigitParserError      ; MAX_NEGATIVE, since that is a valid signed
                                          ; value. Since we accumulate a positive
                                          ; value and check for signed overflow,
                                          ; this case will register as
                                          ; a signed overflow.
                                          
 AddDigitCheckMinNegative:
-        CMP     AX, 32768            ; Check if magnitude is the minimum allowed
+        CMP     AX, MAX_NEGATIVE     ; Check if magnitude is the minimum allowed
         ;JE     AddDigitParserGood   ; signed value. (And negative sign). This
         JNE     AddDigitParserError  ; is a special case because it causes an
                                      ; overflow even though it is a valid
-                                     ; command (for example "V-32768").
+                                     ; command (for example "V-[MAX_NEGATIVE]")
                                        
 AddDigitParserGood:
         MOV     AX, PARSER_GOOD  ; Returns a good status if the parser will 
@@ -487,7 +489,8 @@ GetParserError  ENDP
 ; SetAbsSpeed()
 ; 
 ; Description:       Sets the absolute speed of the RoboTrike based on the
-;                    shared variables. 
+;                    shared variables. Returns the status of the parser
+;                    after checking the sign to make sure it is not negative. 
 ; Operation:         First checks if the sign is -1 and returns PARSER_ERROR
 ;                    if it is. Otherwise calls SetMotorSpeed() to set the absolute 
 ;                    motor speed and returns PARSER_GOOD in AX.
@@ -793,16 +796,20 @@ RotateTurret    ENDP
 ; ParserSetTurretEle()
 ; 
 ; Description:       Sets the turret elevation of the RoboTrike based on the
-;                    shared variables. Is only called after a correctly
-;                    parsed string reaches the TOKEN_END_CMD token, so returns
-;                    PARSER_GOOD in AX.
+;                    shared variables. Checks to make sure the angle is between
+;                    MIN_TURRET_ELEVATION and MAX_TURRET_ELEVATION and returns
+;                    PARSER_ERROR if it is not. Otherwise returns PARSER_GOOD.
 ; Operation:         First checks if the sign has been set. If not, then
 ;                    sets sign = 1. Then sets value *= sign, and 
 ;                    and sets the absolute angle using SetTurretElevation(value).
-;                    Finally returns PARSER_GOOD in AX.
+;                    Checks the angle value to make sure it is between
+;                    MIN_TURRET_ELEVATION and MAX_TURRET_ELEVATION.
+;                    Finally returns PARSER_GOOD in AX if the angle is in the
+;                    proper range.
 ;
 ; Arguments:         None.
-; Return Value:      PARSER_GOOD (AX) - success status of parser.
+; Return Value:      parser_status (AX) - PARSER_GOOD or PARSER_ERROR depending
+;                                         on if an error happened or not.
 ;
 ; Local Variables:   None.
 ; Shared Variables:  Reads value - value being built up
@@ -838,12 +845,34 @@ DoParserSetTurretEle:
         MOV     BX, value           ; the speed argument to SetMotorSpeed.
         IMUL    BX                  ; Note that we must convert sign to a word
                                     ; since value is a word (use CBW).
-                                    
-        CALL    SetTurretElevation  ; Set the turret evlevation with the new absolute
+
+CheckMinTurretElevation:                                    
+        CMP     AX, MIN_TURRET_ELEVATION       ; Make sure that the angle
+        JL      ParserSetTurretEleParserError  ; isn't less than the minimum
+        ;JGE    CheckMaxTurretElevation        ; allowed angle.
+        
+CheckMaxTurretElevation:
+        CMP     AX, MAX_TURRET_ELEVATION       ; Make sure that the angle isn't
+        JG      ParserSetTurretEleParserError  ; greater than the maximum 
+        ;JLE    CallSetTurretElevation         ; allowed angle.
+        
+CallSetTurretElevation:              
+        CALL    SetTurretElevation  ; Set the turret elevation with the new absolute
                                     ; elevation.
         
+ParserSetTurretEleParserGood:
+        MOV     AX, PARSER_GOOD  ; Returns a good status if the parser will 
+                                 ; continue in a valid path with no overflow.
+        JMP     EndParserSetTurretEle
+
+ParserSetTurretEleParserError:
+        MOV     AX, PARSER_ERROR        ; Returns a bad status if there is an
+        ;JMP    EndParserSetTurretEle   ; invalid angle (not between 
+                                        ; MIN_TURRET_ELEVATION 
+                                        ; and MAX_TURRET_ELEVATION)
+        
 EndParserSetTurretEle:                
-        MOV     AX, PARSER_GOOD     ; Return parser status through AX.
+                                    ; Return parser status through AX.
         RET                         ; This is returned by ParseSerialChar.
 
 ParserSetTurretEle ENDP
@@ -938,7 +967,7 @@ FireLaser       ENDP
 
 ; GetParserGood()
 ; 
-; Description:       Used to handle whitespace, which is just ignored. Returns 
+; Description:       Used to handle white space, which is just ignored. Returns 
 ;                    PARSER_GOOD in AX.
 ; Operation:         Returns PARSER_GOOD in AX.
 ;

@@ -23,6 +23,9 @@
 PARSER_GOOD             EQU     0       ; Return value for a good call to PSC.
 PARSER_ERROR            EQU     1       ; Return value for a bad call to PSC.
 
+; Parser overflow constants
+MAX_NEGATIVE            EQU     32768   ; Maximum magnitude of a unsigned 
+                                        ; negative number.
 
 ; Token Type constants:
 TOKEN_DIGIT             EQU     0       ; token is a digit: 0 to 9

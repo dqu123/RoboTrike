@@ -64,3 +64,7 @@ NO_SPEED_CHANGE     EQU     MAX_TOTAL_SPEED + 1 ; Indicates no change in speed.
 NO_ANGLE_CHANGE     EQU     -32768; Indicates no change in angle
 MIN_ANGLE_CHANGE    EQU     NO_ANGLE_CHANGE + 1 ; Lowest valid angle change.
 MAX_ANGLE_CHANGE    EQU     32767 ; Maximum valid angle change. 
+
+; Angle conditions
+MIN_TURRET_ELEVATION EQU    -60   ; Minimum turret elevation allowed
+MAX_TURRET_ELEVATION EQU    60    ; Maximum turret elevation allowed
