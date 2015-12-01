@@ -63,10 +63,10 @@
 ; according to the parser.asm module.
 ; The motor unit sends status strings to the remote unit.
 ; Reserved characters in messages from motor to remote: 
-; 'S' - reserved for indicating speed status
-; 'D' - reserved for indicating direction status
+; 'S' - reserved for indicating speed status.
+; 'D' - reserved for indicating direction status.
 ; 'M' - reserved for indicating motor serial error.
-; 'P' - reserved for indicating 
+; 'P' - reserved for indicating motor unit parser error.
 ; Note that only the uppercase version of the above letters are reserved, so 
 ; the lowercase version should be used in messages that need to be displayed.
 
