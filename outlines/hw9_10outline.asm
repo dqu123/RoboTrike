@@ -104,6 +104,7 @@ END_CMD             EQU     13      ; ASCII for carriage return.
         EXTRN   HandleSerial:NEAR       ; Serial handler function.
         EXTRN   InitSerialChip:NEAR     ; Initialize serial chip registers.
 		EXTRN 	InitSerialVars:NEAR     ; Initialize serial shared variables.
+        EXTRN   Display:NEAR            ; Display a string.
 
 ; Read-only tables
 ParserError LABEL   BYTE
@@ -719,8 +720,9 @@ DATA    ENDS
 ; Operation:         First checks for DISPLAY_SPEED_KEY, DISPLAY_DIRECTION_KEY,
 ;                    and DISPLAY_ERROR_KEY. For those keys, a call to display
 ;                    is made with the appropriate buffer. If the key is anything
-;                    else, sends a the associated command message to the serial.
+;                    else, sends the associated command message to the serial.
 ;                    The message to send is determined by the KeypadCommandTable.
+;                    The message is displayed for the user.
 ;
 ; Arguments:         None.
 ; Return Value:      None.
@@ -733,7 +735,7 @@ DATA    ENDS
 ;                    event handler which debounces on a timer repeat.
 ; Output:            Displays a string from one of the buffers if one of the 
 ;                    DISPLAY keys is pressed. Otherwise, sends a message through
-;                    the serial.
+;                    the serial and displays the sent message.
 ;
 ; Error Handling:    None.
 ;
@@ -758,7 +760,9 @@ DATA    ENDS
 ;     Display(error_buffer)
 ;     break
 ; default:
-;     SerialSendString(KeypadCommandTable[keycode * KEYPAD_COMMAND_STR_LENGTH])
+;     string = KeypadCommandTable[keycode * KEYPAD_COMMAND_STR_LENGTH]
+;     Display(string)
+;     SerialSendString(string)
 
 
 ; Motor Main
