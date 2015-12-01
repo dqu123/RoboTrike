@@ -368,6 +368,7 @@ DATA    ENDS
 ;     do
 ;         SerialPutChar(char)
 ;     while (CF != 0)
+;     i++
 ; while (char != NULL)
 
 
