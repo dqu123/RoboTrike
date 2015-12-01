@@ -29,14 +29,14 @@
 ; Local functions:
 ; DisplayStatus      - display a status value with character to designate what
 ;                      parameter is being displayed.
-; DoSerialErrorEvent -
-; DoSerialDataEvent  -
-; DoKeypadEvent      - Handle keypad events by calling the keypad table
+; DoSerialErrorEvent - handle remote serial error.
+; DoSerialDataEvent  - handle remote serial data.
+; DoKeypadEvent      - Handle keypad events by calling the keypad table.
 ;
 ; Tables:
-; RemoteEventActionTable - actions for each remote event in a switch table
-; RemoteSerialErrorTable - error messages for remote serial errors
-; KeypadCommandTable     - commands for each keypress
+; RemoteEventActionTable - actions for each remote event in a switch table.
+; RemoteSerialErrorTable - error messages for remote serial errors.
+; KeypadCommandTable     - commands for each keypress.
 ;
 ; File: motorMn.asm
 ; MotorMain         - run motor main loop.
