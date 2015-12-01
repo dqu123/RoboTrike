@@ -64,10 +64,11 @@
 ; Constants
 BUFFER_SIZE             EQU     32      ; Size of string buffer.
 
-; states
-SPEED_STATE             EQU     0       ; Reading speed.
-DIRECTION_STATE         EQU     1       ; Reading direction.
-ERROR_STATE             EQU     2       ; Reading error.
+; Remote main states
+START_STATE             EQU     0       ; Initial state.
+SPEED_STATE             EQU     1       ; Reading speed.
+DIRECTION_STATE         EQU     2       ; Reading direction.
+ERROR_STATE             EQU     3       ; Reading error.
 
 ; Remote Event constants
 SERIAL_ERROR_EVENT  EQU     0       ; Value for a serial error event.
@@ -95,10 +96,10 @@ RemoteEventActionTable LABEL   WORD ; Table of functions for
         DW      DoSerialDataEvent   ; the remote main loop. These functions handle
         DW      DoKeypadEvent       ; various event types.
 
-RemoteEventActionTable LABEL   WORD ; Table of functions for
-        DW      DoSerialErrorEvent  ; the switch statement in 
-        DW      DoSerialDataEvent   ; the remote main loop. These functions handle
-        DW      DoKeypadEvent       ; various event types.
+MotorEventActionTable LABEL   WORD   ; Table of functions for
+        DW      MtrSerialErrorEvent  ; the switch statement in 
+        DW      MtrSerialDataEvent   ; the motor main loop. These functions handle
+        DW      DoNOP                ; various event types.
 
 ; Fixed Length String Tables
 ;
@@ -148,6 +149,20 @@ STRFIXLength	EQU	%length - 1	; the length of the table strings
         %TABENT('R_FrmErr')	   ; remote serial frame error
         %TABENT('R_OvrErr')	   ; remote serial overrun error
         %TABENT('R_BufErr')	   ; remote serial buffer overflow
+        %TABENT('UnkwnErr')    ; unknown error.
+)
+SERIAL_ERROR_STR_LENGTH	    EQU	    %length - 1	; the length of the table strings
+					;    - 1 because we were counting the delimiters too
+                    ; but we add a NULL char.
+                    
+;actually create the table
+RemoteSerialErrorTable  LABEL       BYTE
+
+        %STRFIXTABLE
+        
+%*DEFINE(STRFIXTABLE)  (
+	%SET(length, 0)			;don't know length yet
+        
         %TABENT('M_ParErr')    ; motor serial parity error
         %TABENT('M_FrmErr')	   ; motor serial frame error
         %TABENT('M_OvrErr')	   ; motor serial overrun error
@@ -156,7 +171,7 @@ STRFIXLength	EQU	%length - 1	; the length of the table strings
 )
 
 ;actually create the table
-SerialErrorTable  LABEL       BYTE
+MtrSerialErrorTable  LABEL       BYTE
 
         %STRFIXTABLE
 
@@ -268,9 +283,12 @@ KEYPAD_COMMAND_STR_LENGTH	    EQU	    %length	; the length of the table strings
 ; Remote main shared variables.
 DATA    SEGMENT PUBLIC  'DATA'
     state            DB  ?   ; state of remote main loop (based on received)
+    speed_index      DB  ?   ; current index in the speed buffer.
     speed_buffer     DB BUFFER_SIZE DUP (?) ; speed status of motor.
-    direction_buffer DB BUFFER_SIZE DUP (?) ; direction status of motor
-    error_buffer	 DB	BUFFER_SIZE	DUP (?) ; buffer of last error
+    direction_index  DB  ?   ; current index in the direction buffer.
+    direction_buffer DB BUFFER_SIZE DUP (?) ; direction status of motor.
+    error_index      DB  ?   ; current index in the error buffer.
+    error_buffer	 DB	BUFFER_SIZE	DUP (?) ; buffer of last error.
     eventQueue       queueSTRUC<> ; Event queue. This is a word queue that
                                  ; holds events.
     
@@ -284,23 +302,76 @@ DATA    SEGMENT PUBLIC  'DATA'
     
 DATA    ENDS
                     
-
-; Serial Main 
-; Pseudo code: 
+; SerialSendString(char* string) 
+; Pseudo code:
+; unsigned word i = 0;
+; do 
+;     char = string[i]
+;     do
+;         SerialPutChar(char)
+;     while (CF != 0)
+; while (char != NULL)
+                    
+; Remote Main 
+; Pseudo code:
+; InitRemoteMain() 
 ; while (true)
 ;    if (!eventQueue.empty()) 
 ;        unsigned word event = eventQueue.dequeue()
 ;        RemoteEventActionTable[event.type].action(event.value) 
         
-; Motor Main
+
+
+
+
+
+; InitRemoteMain()
+; QueueInit(eventQueue, 0, WORD_SIZE)
+; state = NONE_STATE 
+; speed_index = 1
+; speed_buffer[0] = 'S'
+; direction_index = 1
+; direction_buffer[0] = 'D'
+; error_index = 0
+
+; DoSerialErrorEvent(error)
 ; Pseudo code:
-; while (true)
-;    if (!eventQueue.empty()) 
-;        unsigned word event = eventQueue.dequeue()
-;        MotorEventActionTable[event.type].action(event.value)
+; if error == SERIAL_PARITY_ERROR
+;     Display(SerialErrorTable[0])
+; else if error == SERIAL_FRAME_ERROR
+;     Display(SerialErrorTable[1])
+; else if error == SERIAL_OVERRUN_ERROR 
+;     Display(SerialErrorTable[2])
+; else if error == SERIAL_OVERFLOW_ERROR
+;     Display(SerialErrorTable[3])
 
+; DoSerialDataEvent(data)
+; Pseudo code:
+; switch (data)
+; case ('S'):
+;     state = SPEED_STATE
+;     speed_index = 1
+;     break
+; case ('D'):
+;     state = DIRECTION_STATE
+;     direction_index = 1
+;     break
+; case ('E')
+;     state = ERROR_STATE
+;     error_index = 0
+;     break
+; default
+;     if state == SPEED_STATE
+;         speed_buffer[speed_index] = data
+;         speed_index++
+;     else if state == DIRECTION_STATE
+;         direction_buffer[direction_index] = data
+;         direction_index++
+;     else if state = ERROR_STATE
+;         error_buffer[error_index] = data
+;         error_index++
 
-; DoKeypadEvent
+; DoKeypadEvent(keycode)
 ; 
 ; Description:       
 ; Operation:         
@@ -339,12 +410,16 @@ DATA    ENDS
 ; default:
 ;     SerialSendString(KeypadCommandTable[keycode * KEYPAD_COMMAND_STR_LENGTH])
 
+; Motor Main
+; Pseudo code:
+; InitMotorMain()
+; while (true)
+;    if (!eventQueue.empty()) 
+;        unsigned word event = eventQueue.dequeue()
+;        MotorEventActionTable[event.type].action(event.value)
 
-; SerialSendString(char* string) Pseudo code:
-; unsigned word i = 0;
-; do 
-;     char = string[i]
-;     do
-;         SerialPutChar(char)
-;     while (CF != 0)
-; while (char != NULL)
+; InitMotorMain()
+; Pseudo code:
+; QueueInit(eventQueue, 0, WORD_SIZE)
+
+;
