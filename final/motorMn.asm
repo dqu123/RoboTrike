@@ -23,7 +23,9 @@
 ;
 ; Revision History:
 ;    12/3/15  David Qu	               initial revision
+;
 ; local include files
+$INCLUDE(general.inc)
 
 CGROUP  GROUP   CODE
 
@@ -36,7 +38,7 @@ CODE    SEGMENT PUBLIC 'CODE'
 ; external function declarations
         EXTRN   InitCS:NEAR             ;initialize chip select
         EXTRN   InitParser:NEAR         ;initialize shared variables
-		EXTRN   ParseTest:NEAR          ;tests parser behavior.
+		EXTRN   DoNOP:NEAR              ;does nothing.
 
 START:  
 

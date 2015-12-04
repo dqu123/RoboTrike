@@ -356,7 +356,9 @@ HandleSerial    ENDP
 SerialPutChar   PROC     NEAR
                 PUBLIC   SerialPutChar
 				
-        PUSHA
+        PUSH    SI
+        PUSH    BX
+        PUSH    CX
         
 CheckTxQueueFull:        	
         MOV     SI, OFFSET(txQueue)  ; Check the txQueue
@@ -401,7 +403,9 @@ TxQueueFull:
 
         
 EndSerialPutChar:
-        POPA
+        POP     CX
+        POP     BX
+        POP     SI
         
         RET
 

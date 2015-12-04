@@ -84,6 +84,12 @@ RemoteEventActionTable LABEL   WORD ; Table of functions for
         DW      DoSerialErrorEvent  ; the remote main loop. These functions handle
         DW      DoSerialDataEvent   ; various event types.     
         DW      DoNOP
+        
+BufferWriteTable    LABEL   WORD ; Table of functions for
+        DW      WriteSpeedBuffer      ; the switch statement in 
+        DW      WriteDirectionBuffer  ; the remote main loop. These functions handle
+        DW      WriteErrorBuffer      ; various event types.     
+        DW      DoNOP
 
 KeyActionTable      LABEL   WORD
         ; Row 0 of keypad
@@ -111,11 +117,11 @@ KeyActionTable      LABEL   WORD
         DW      DoNOP       ; 14H
         DW      DoNOP       ; 15H
         DW      DoNOP       ; 16H
-        DW      DisplayBuffer ; 17H  Button 7 (Display error)
+        DW      DisplayErrorBuffer ; 17H  Button 7 (Display error)
         DW      DoNOP       ; 18H 
         DW      DoNOP       ; 19H 
         DW      DoNOP       ; 1AH
-        DW      DisplayBuffer ; 1BH  Button 6 (Display direction)
+        DW      DisplayDirectionBuffer ; 1BH  Button 6 (Display direction)
         DW      DoNOP       ; 1CH 
         DW      DisplaySpeedBuffer ; 1DH  Button 5 (Display speed)
         DW      SendKeypadCommand ; 1EH  Button 4 (Full speed ahead)
@@ -337,6 +343,7 @@ DoRemoteMainEvent:
 
 CheckForCriticalError:
         CALL    GetCriticalError        ; Check for a critical error.
+        TEST    AL, AL
         JNZ     MAIN                    ; If there is, reset.
         JZ      ProcessRemoteMainLoop   ; Otherwise continue processing events.
         
@@ -396,8 +403,8 @@ InitRemoteMain      PROC     NEAR
         CALL    ClrIRQVectors           ;clear (initialize) interrupt vector table
 
         CALL    InitEvents              ;initialize event queue.
-        MOV     state, START_STATE      ;start at START_STATE in remote parser.
-        MOV     index, 0                ;start with index of 0.
+        MOV     state, SPEED_STATE      ;start at SPEED_STATE in remote parser.
+        MOV     index, 1                ;start with index of 1.
         MOV     speed_buffer, 'S'       ;start with an 'S' in speed buffer,
         MOV     direction_buffer, 'D'   ;and a 'D' in the direction buffer.
         
@@ -521,7 +528,7 @@ DoSerialDataEvent   PROC     NEAR
         JE      DisplayDirectionCase
         
         CMP     AL, 'M'
-        JE      DisplayMotorParserErrorCase
+        JE      DisplayMotorSerialErrorCase
         
         CMP     AL, 'P' 
         JE      DisplayMotorParserErrorCase
@@ -554,7 +561,9 @@ DefaultCase:
         XOR     BH, BH
         MOV     BL, state
         IMUL    BX, BX, BUFFER_SIZE
-        ADD     BL, index
+        MOV     CL, index
+        XOR     CH, CH
+        ADD     BX, CX
         MOV     [SI + BX], AL
         MOV     BYTE PTR [SI + BX + 1], ASCII_NULL
         INC     index
@@ -719,14 +728,14 @@ DisplayBuffer   ENDP
 
 ; DisplayBuffer()
 ; 
-; Description:       Displays a buffer based on the state shared variable.
+; Description:       Displays the speed buffer.
 ; Operation:         
 ;
 ; Arguments:         None.
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
-; Shared Variables:  None.
+; Shared Variables:  Reads from the speed_buffer - buffer to store speed status.
 ; Global Variables:  None.
 ;
 ; Input:             Key presses generate keypress events through the keypad
@@ -738,7 +747,7 @@ DisplayBuffer   ENDP
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
-; Data Structures:   KeypadCommandTable fixed length string table.
+; Data Structures:   speed_buffer string buffer of speed status.
 ;
 ; Known Bugs:        None.
 ; Limitations:       None.
@@ -756,6 +765,89 @@ DisplaySpeedBuffer   PROC     NEAR
         RET     
 
 DisplaySpeedBuffer   ENDP
+
+
+; DisplayDirectionBuffer()
+; 
+; Description:       Displays the direction buffer.
+; Operation:         
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads from the speed_buffer - buffer to store speed status.
+; Global Variables:  None.
+;
+; Input:             Key presses generate keypress events through the keypad
+;                    event handler which debounces on a timer repeat.
+; Output:            Displays a string from one of the buffers if one of the 
+;                    DISPLAY keys is pressed. Otherwise, sends a message through
+;                    the serial and displays the sent message.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   direction_buffer - string buffer of direction status.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+DisplayDirectionBuffer   PROC     NEAR
+        
+        MOV     BX, DS
+        MOV     ES, BX
+        
+        MOV     SI, OFFSET(direction_buffer)
+        CALL    Display
+        
+        RET     
+
+DisplayDirectionBuffer   ENDP
+
+
+; DisplayErrorBuffer()
+; 
+; Description:       Displays the direction buffer.
+; Operation:         
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads from the speed_buffer - buffer to store speed status.
+; Global Variables:  None.
+;
+; Input:             Key presses generate keypress events through the keypad
+;                    event handler which debounces on a timer repeat.
+; Output:            Displays a string from one of the buffers if one of the 
+;                    DISPLAY keys is pressed. Otherwise, sends a message through
+;                    the serial and displays the sent message.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   direction_buffer - string buffer of direction status.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+DisplayErrorBuffer  PROC     NEAR
+        
+        MOV     BX, DS
+        MOV     ES, BX
+        
+        MOV     SI, OFFSET(error_buffer)
+        CALL    Display
+        
+        RET     
+
+DisplayErrorBuffer  ENDP
+
 
 CODE    ENDS
 
