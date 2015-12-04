@@ -179,7 +179,7 @@ CheckForCriticalError:
         JZ      ProcessMotorMainLoop    ; Otherwise continue processing events.
         
         
-        RET                             ;Exit program. Should not be called. 
+        HLT                             ;Exit program. Should not be called. 
 
         
 ; InitMotorMain()
