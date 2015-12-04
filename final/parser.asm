@@ -1013,7 +1013,7 @@ GetParserGood   ENDP
 ; Last Modified:    Nov. 23, 2015 (David Qu)
 
 %*DEFINE(TABLE)  (
-        %TABENT(TOKEN_OTHER, 0)		;<null> 
+        %TABENT(TOKEN_WHITE_SPACE, 0) ;<null> (ignored) 
         %TABENT(TOKEN_OTHER, 1)		;SOH
         %TABENT(TOKEN_OTHER, 2)		;STX
         %TABENT(TOKEN_OTHER, 3)		;ETX
