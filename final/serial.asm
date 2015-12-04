@@ -213,8 +213,9 @@ SerialSendStringResendChar:
                                 ; successful and reset otherwise. No error
                                 ; if CF is reset, so skip enqueuing an error.
         INC     CL              ; update inner loop index CL
-        CMP     CL, 5           ; end when CL = 5 (do up to 5 times)
-        JNE     SerialSendStringResendChar ; Loop if CL < 5. 
+        CMP     CL, NUM_RESEND  ; end when CL = NUM_RESEND (repeat NUM_RESEND
+                                ; times)
+        JNE     SerialSendStringResendChar ; Loop if CL < NUM_RESEND. 
         ;JE     SerialSendStringError
         
 SerialSendStringError:

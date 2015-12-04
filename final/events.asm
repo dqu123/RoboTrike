@@ -178,10 +178,6 @@ EnqueueEvent    ENDP
 ;
 ; Registers Changed: flags, AX, SI.
 ; Special notes:     None.
-;
-; Pseudo code:
-; if !QueueFull(eventQueue)
-;    Enqueue(eventQueue, event)
 DequeueEvent    PROC     NEAR
                 PUBLIC   DequeueEvent
                 
