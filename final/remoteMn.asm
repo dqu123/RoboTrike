@@ -80,9 +80,9 @@ ParserError LABEL   BYTE
         DB      'ParseErr', 0       ; Motor parser error string.
 
 RemoteEventActionTable LABEL   WORD ; Table of functions for
-        DW      DoSerialErrorEvent  ; the switch statement in 
-        DW      DoSerialDataEvent   ; the remote main loop. These functions handle
-        DW      DoKeypadEvent       ; various event types.
+        DW      DoKeypadEvent       ; the switch statement in 
+        DW      DoSerialErrorEvent  ; the remote main loop. These functions handle
+        DW      DoSerialDataEvent   ; various event types.     
         DW      DoNOP
 
 KeyActionTable      LABEL   WORD
@@ -117,7 +117,7 @@ KeyActionTable      LABEL   WORD
         DW      DoNOP       ; 1AH
         DW      DisplayBuffer ; 1BH  Button 6 (Display direction)
         DW      DoNOP       ; 1CH 
-        DW      DisplayBuffer ; 1DH  Button 5 (Display speed)
+        DW      DisplaySpeedBuffer ; 1DH  Button 5 (Display speed)
         DW      SendKeypadCommand ; 1EH  Button 4 (Full speed ahead)
         DW      DoNOP       ; 1FH
         
@@ -714,6 +714,48 @@ DisplayBuffer   PROC     NEAR
         RET     
 
 DisplayBuffer   ENDP
+
+
+
+; DisplayBuffer()
+; 
+; Description:       Displays a buffer based on the state shared variable.
+; Operation:         
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             Key presses generate keypress events through the keypad
+;                    event handler which debounces on a timer repeat.
+; Output:            Displays a string from one of the buffers if one of the 
+;                    DISPLAY keys is pressed. Otherwise, sends a message through
+;                    the serial and displays the sent message.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   KeypadCommandTable fixed length string table.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+DisplaySpeedBuffer   PROC     NEAR
+        
+        MOV     BX, DS
+        MOV     ES, BX
+        
+        MOV     SI, OFFSET(speed_buffer)
+        CALL    Display
+        
+        RET     
+
+DisplaySpeedBuffer   ENDP
 
 CODE    ENDS
 

@@ -206,6 +206,7 @@ SerialSendStringLoop:
         MOV     AL, ES:[SI + BX]   ; Get current character in string.
         MOV     CH, AL          ; Save a copy in CH since AX may be used
                                 ; to call EnqueueEvent.
+        PUSH    SI                        
         
 SerialSendStringResendChar:
         CALL    SerialPutChar   ; Try to send it to serial.
@@ -225,6 +226,7 @@ SerialSendStringError:
         CALL    EnqueueEvent            ; Enqueue error event.
         
 SerialSendStringEndLoop:
+        POP     SI
         INC     BX              ; Update index to next character.
         CMP     CH, ASCII_NULL  ; Check if at end of string by looking for NULL.
         JNE     SerialSendStringLoop ; If not at end, continue looping.
@@ -354,6 +356,7 @@ HandleSerial    ENDP
 SerialPutChar   PROC     NEAR
                 PUBLIC   SerialPutChar
 				
+        PUSHA
         
 CheckTxQueueFull:        	
         MOV     SI, OFFSET(txQueue)  ; Check the txQueue
@@ -398,6 +401,7 @@ TxQueueFull:
 
         
 EndSerialPutChar:
+        POPA
         
         RET
 

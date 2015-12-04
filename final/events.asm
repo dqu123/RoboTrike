@@ -184,7 +184,7 @@ DequeueEvent    PROC     NEAR
         MOV     SI, OFFSET(eventQueue)  ; Check if the event queue is empty.
         CALL    QueueEmpty              ; If it is, signal
         ;JZ     EventQueueEmpty         ; reset the system.
-        JNZ     DoEnqueueEvent          ; Else, just enqueue the event.
+        JNZ     DoDequeueEvent          ; Else, just dequeue the event.
  
 EventQueueEmpty:
         STC                             ; Set the CF to signal that the event
