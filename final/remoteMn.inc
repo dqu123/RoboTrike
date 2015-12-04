@@ -19,7 +19,7 @@ DISPLAY_DIRECTION_KEY   EQU     1BH     ; Keycode for display direction key
 DISPLAY_ERROR_KEY       EQU     17H     ; Keycode for display error key
 
 ; Remote main states
-START_STATE             EQU     0       ; Initial state.
-SPEED_STATE             EQU     2       ; Reading speed.
-DIRECTION_STATE         EQU     4       ; Reading direction.
-ERROR_STATE             EQU     6       ; Reading error.
+SPEED_STATE             EQU     0       ; Reading speed.
+DIRECTION_STATE         EQU     1       ; Reading direction.
+ERROR_STATE             EQU     2       ; Reading error.
+START_STATE             EQU     3       ; Initial state.

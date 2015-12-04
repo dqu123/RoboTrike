@@ -83,8 +83,9 @@ RemoteEventActionTable LABEL   WORD ; Table of functions for
         DW      DoSerialErrorEvent  ; the switch statement in 
         DW      DoSerialDataEvent   ; the remote main loop. These functions handle
         DW      DoKeypadEvent       ; various event types.
+        DW      DoNOP
 
-KeyActionTable
+KeyActionTable      LABEL   WORD
         ; Row 0 of keypad
         DW      DoNOP       ; 00H 
         DW      DoNOP       ; 01H 
@@ -110,14 +111,14 @@ KeyActionTable
         DW      DoNOP       ; 14H
         DW      DoNOP       ; 15H
         DW      DoNOP       ; 16H
-        DW      DoNOP       ; 17H  Button 7 (Display error)
+        DW      DisplayBuffer ; 17H  Button 7 (Display error)
         DW      DoNOP       ; 18H 
         DW      DoNOP       ; 19H 
         DW      DoNOP       ; 1AH
-        DW      DoNOP       ; 1BH  Button 6 (Display direction)
+        DW      DisplayBuffer ; 1BH  Button 6 (Display direction)
         DW      DoNOP       ; 1CH 
-        DW      DoNOP       ; 1DH  Button 5 (Display speed)
-        DW      DoNOP       ; 1EH  Button 4 (Full speed ahead)
+        DW      DisplayBuffer ; 1DH  Button 5 (Display speed)
+        DW      SendKeypadCommand ; 1EH  Button 4 (Full speed ahead)
         DW      DoNOP       ; 1FH
         
         DW      DoNOP       ; 20H 
@@ -127,14 +128,14 @@ KeyActionTable
         DW      DoNOP       ; 24H
         DW      DoNOP       ; 25H
         DW      DoNOP       ; 26H
-        DW      DoNOP       ; 27H  Button 11 (stop command)
+        DW      SendKeypadCommand ; 27H  Button 11 (stop command)
         DW      DoNOP       ; 28H 
         DW      DoNOP       ; 29H 
         DW      DoNOP       ; 2AH
-        DW      DoNOP       ; 2BH  Button 10 (forward command)
+        DW      SendKeypadCommand ; 2BH  Button 10 (forward command)
         DW      DoNOP       ; 2CH 
-        DW      DoNOP       ; 2DH  Button 9  (slow down command)
-        DW      DoNOP       ; 2EH  Button 8  (fire laser command)
+        DW      SendKeypadCommand ; 2DH  Button 9  (slow down command)
+        DW      SendKeypadCommand ; 2EH  Button 8  (fire laser command)
         DW      DoNOP       ; 2FH
         
         DW      DoNOP       ; 30H 
@@ -144,14 +145,14 @@ KeyActionTable
         DW      DoNOP       ; 34H
         DW      DoNOP       ; 35H
         DW      DoNOP       ; 36H
-        DW      DoNOP       ; 37H  Button 15 (move right command)
+        DW      SendKeypadCommand ; 37H  Button 15 (move right command)
         DW      DoNOP       ; 38H 
         DW      DoNOP       ; 39H 
         DW      DoNOP       ; 3AH
-        DW      DoNOP       ; 3BH  Button 14 (reverse command)  
+        DW      SendKeypadCommand ; 3BH  Button 14 (reverse command)  
         DW      DoNOP       ; 3CH 
-        DW      DoNOP       ; 3DH  Button 13 (move left command)
-        DW      DoNOP       ; 3EH  Button 12 (laser off command)
+        DW      SendKeypadCommand ; 3DH  Button 13 (move left command)
+        DW      SendKeypadCommand ; 3EH  Button 12 (laser off command)
         DW      DoNOP       ; 3FH
         
 ; Fixed Length String Tables
@@ -187,15 +188,16 @@ KeyActionTable
         %TABENT('R_brkErr')	   ; remote serial buffer overflow
         %TABENT('R_putErr')    ; error when calling SerialSendString.
 )
-SERIAL_ERROR_STR_LENGTH	    EQU	    %length - 1	; the length of the table strings
-					;    - 1 because we were counting the delimiters too
-                    ; but we add a NULL char.
+
                     
 ;actually create the table
 RemoteSerialErrorTable  LABEL       BYTE
 
         %STRFIXTABLE
-                    
+        
+SERIAL_ERROR_STR_LENGTH	    EQU	    %length - 1	; the length of the table strings
+					;    - 1 because we were counting the delimiters too
+                    ; but we add a NULL char.                    
                     
 ; End command (Carriage Return), null terminated strings.
 %*DEFINE(TABENT(string))  (
@@ -394,7 +396,7 @@ InitRemoteMain      PROC     NEAR
         CALL    ClrIRQVectors           ;clear (initialize) interrupt vector table
 
         CALL    InitEvents              ;initialize event queue.
-        MOV     state, NONE_STATE       ;start at NONE_STATE in remote parser.
+        MOV     state, START_STATE      ;start at START_STATE in remote parser.
         MOV     index, 0                ;start with index of 0.
         MOV     speed_buffer, 'S'       ;start with an 'S' in speed buffer,
         MOV     direction_buffer, 'D'   ;and a 'D' in the direction buffer.
@@ -452,26 +454,23 @@ InitRemoteMain      ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, SI, AX, BX. ES.
 ; Special notes:     None.
-;
-; Pseudo code:
-; if error == SERIAL_PARITY_ERROR
-;     Display(RemoteSerialErrorTable[0 * SERIAL_ERROR_STR_LENGTH])
-; else if error == SERIAL_FRAME_ERROR
-;     Display(RemoteSerialErrorTable[1 * SERIAL_ERROR_STR_LENGTH])
-; else if error == SERIAL_OVERRUN_ERROR 
-;     Display(RemoteSerialErrorTable[2 * SERIAL_ERROR_STR_LENGTH])
-; else if error == SERIAL_OVERFLOW_ERROR
-;     Display(RemoteSerialErrorTable[3 * SERIAL_ERROR_STR_LENGTH])
-GetCriticalError    PROC     NEAR
-                    PUBLIC   GetCriticalError
+DoSerialErrorEvent  PROC     NEAR
+                    PUBLIC   DoSerialErrorEvent
 
-        MOV     AL, criticalError
-       
+        MOV     SI, OFFSET(RemoteSerialErrorTable)
+        XOR     AH, AH
+        IMUL    AX, AX, SERIAL_ERROR_STR_LENGTH
+        ADD     SI, AX
+        
+        MOV     BX, CS
+        MOV     ES, BX
+        CALL    Display
+        
         RET     
 
-GetCriticalError    ENDP
+DoSerialErrorEvent  ENDP
 
 
 ; DoSerialDataEvent(data)
@@ -512,39 +511,60 @@ GetCriticalError    ENDP
 ;
 ; Registers Changed: flags.
 ; Special notes:     None.
-; Pseudo code:
-; switch (data)
-; case ('S'):
-;     state = SPEED_STATE
-;     speed_index = 1
-;     break
-; case ('D'):
-;     state = DIRECTION_STATE
-;     direction_index = 1
-;     break
-; case ('M')
-;     state = ERROR_STATE
-;     error_index = 1
-;     error_buffer[0] = 'M' 
-;     break
-; case ('P')
-;     state = ERROR_STATE
-;     error_index = 1
-;     error_buffer[0] = 'P'
-; default
-;     if state == SPEED_STATE
-;         speed_buffer[speed_index] = data
-;         speed_index++
-;         speed_buffer[speed_index] = NULL ; Null end in case want to display
-                                           ; early, or if null is forgotten.
-;     else if state == DIRECTION_STATE
-;         direction_buffer[direction_index] = data
-;         direction_index++
-;         direction_buffer[direction_index] = NULL
-;     else if state = ERROR_STATE
-;         error_buffer[error_index] = data
-;         error_index++
-;         error_buffer[error_index] = NULL
+DoSerialDataEvent   PROC     NEAR
+                    PUBLIC   DoSerialDataEvent
+
+        CMP     AL, 'S'
+        JE      DisplaySpeedCase
+        
+        CMP     AL, 'D' 
+        JE      DisplayDirectionCase
+        
+        CMP     AL, 'M'
+        JE      DisplayMotorParserErrorCase
+        
+        CMP     AL, 'P' 
+        JE      DisplayMotorParserErrorCase
+        JNE     DefaultCase
+        
+DisplaySpeedCase:
+        MOV     state, SPEED_STATE
+        JMP     ResetIndex
+
+DisplayDirectionCase:
+        MOV     state, DIRECTION_STATE
+        JMP     ResetIndex        
+
+DisplayMotorSerialErrorCase:
+        MOV     state, ERROR_STATE
+        MOV     error_buffer, 'M'
+        JMP     ResetIndex
+        
+DisplayMotorParserErrorCase:
+        MOV     state, ERROR_STATE
+        MOV     error_buffer, 'P'
+        ;JMP    ResetIndex
+        
+ResetIndex:
+        MOV     index, 1
+        JMP     EndSerialDataEvent
+
+DefaultCase:
+        MOV     SI, OFFSET(speed_buffer)
+        XOR     BH, BH
+        MOV     BL, state
+        IMUL    BX, BX, BUFFER_SIZE
+        ADD     BL, index
+        MOV     [SI + BX], AL
+        MOV     BYTE PTR [SI + BX + 1], ASCII_NULL
+        INC     index
+        ;JMP    EndSerialDataEvent
+
+EndSerialDataEvent:
+        
+        RET     
+
+DoSerialDataEvent   ENDP
 
 
 ; DoKeypadEvent(keycode)
@@ -584,22 +604,116 @@ GetCriticalError    ENDP
 ;
 ; Registers Changed: flags.
 ; Special notes:     None.
+DoKeypadEvent   PROC     NEAR
+                PUBLIC   DoKeypadEvent
+                    
+        XOR     BH, BH
+        MOV     BL, AL
+        SHL     BX, 1
+        CALL    KeyActionTable[BX]
+
+EndDoKeypadEvent:
+        
+        RET     
+
+DoKeypadEvent   ENDP
+
+; SendKeypadCommand(keycode)
+; 
+; Description:       Takes a keycode (AL) and handles the key behavior by sending 
+;                    a command to the motor unit. This is done with a table look 
+;                    up to the KeypadCommandTable.
+; Operation:         Sends the associated command message to the serial.
+;                    The message to send is determined by the KeypadCommandTable.
+;                    The message is displayed for the user.
 ;
-; Pseudo code:
-; switch (keycode):
-; case (DISPLAY_SPEED_KEY): 
-;     Display(speed_buffer)
-;     break
-; case (DISPLAY_DIRECTION_KEY):
-;     Display(direction_buffer)
-;     break
-; case (DISPLAY_ERROR_KEY):
-;     Display(error_buffer)
-;     break
-; default:
-;     string = KeypadCommandTable[keycode * KEYPAD_COMMAND_STR_LENGTH]
-;     Display(string)
-;     SerialSendString(string)
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             Key presses generate keypress events through the keypad
+;                    event handler which debounces on a timer repeat.
+; Output:            Sends a message through
+;                    the serial and displays the sent message.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   KeypadCommandTable fixed length string table.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+SendKeypadCommand   PROC     NEAR
+                    PUBLIC   SendKeypadCommand
+                    
+        MOV     BX, CS
+        MOV     ES, BX
+        
+        MOV     SI, OFFSET(KeypadCommandTable)
+        XOR     AH, AH
+        IMUL    AX, AX, KEYPAD_COMMAND_STR_LENGTH
+        ADD     SI, AX
+        CALL    Display
+        
+        CALL    SerialSendString
+
+EndSendKeypadCommand:
+        
+        RET     
+
+SendKeypadCommand   ENDP
+
+; DisplayBuffer()
+; 
+; Description:       Displays a buffer based on the state shared variable.
+; Operation:         
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             Key presses generate keypress events through the keypad
+;                    event handler which debounces on a timer repeat.
+; Output:            Displays a string from one of the buffers if one of the 
+;                    DISPLAY keys is pressed. Otherwise, sends a message through
+;                    the serial and displays the sent message.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   KeypadCommandTable fixed length string table.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags.
+; Special notes:     None.
+DisplayBuffer   PROC     NEAR
+                PUBLIC   DisplayBuffer
+        
+        MOV     BX, DS
+        MOV     ES, BX
+        
+        MOV     SI, OFFSET(speed_buffer)
+        XOR     BH, BH
+        MOV     BL, state
+        IMUL    BX, BX, BUFFER_SIZE
+        ADD     SI, BX
+        
+        CALL    Display
+        
+        RET     
+
+DisplayBuffer   ENDP
 
 CODE    ENDS
 
@@ -611,8 +725,6 @@ DATA    SEGMENT PUBLIC  'DATA'
     speed_buffer     DB BUFFER_SIZE DUP (?) ; speed status of motor.
     direction_buffer DB BUFFER_SIZE DUP (?) ; direction status of motor.
     error_buffer	 DB	BUFFER_SIZE	DUP (?) ; buffer of last motor error.
-    eventQueue       queueSTRUC<> ; Event queue. This is a word queue that
-                                 ; holds events.
 DATA    ENDS
 
 

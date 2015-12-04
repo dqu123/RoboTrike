@@ -174,7 +174,7 @@ InitSerialVars  ENDP
 ;                    SerialPutChar repeatedly on that character until it works.
 ;                    Stop when the ASCII_NULL character is reached.
 ;
-; Arguments:         string (SI) - start address of a character ASCII string
+; Arguments:         string (Es:SI) - start address of a character ASCII string
 ;                                  to send through the serial.
 ; Return Value:      None.
 ;
@@ -203,7 +203,7 @@ SerialSendString    PROC     NEAR
 SerialSendStringLoop:
         XOR     CL, CL          ; Prepare inner loop index CL = 0 to
                                 ; retry SerialPutChar if it fails.
-        MOV     AL, SI[BX]      ; Get current character in string.
+        MOV     AL, ES:[SI + BX]   ; Get current character in string.
         MOV     CH, AL          ; Save a copy in CH since AX may be used
                                 ; to call EnqueueEvent.
         
