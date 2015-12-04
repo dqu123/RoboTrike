@@ -21,6 +21,20 @@
 ; Known Bugs:       None.
 ; Limitations:      None.
 ;
+; Public functions:
+; None.
+;
+; Local functions:
+; DisplayStatus      - display a status value with character to designate what
+;                      parameter is being displayed.
+; DoSerialErrorEvent - handle remote serial error.
+; DoSerialDataEvent  - handle remote serial data.
+; DoKeypadEvent      - Handle keypad events by calling the keypad table.
+;
+; Tables:
+; RemoteEventActionTable - actions for each remote event in a switch table.
+; RemoteSerialErrorTable - error messages for remote serial errors.
+; KeypadCommandTable     - commands for each keypress.
 ; Revision History:
 ;    12/3/15  David Qu	               initial revision
 ; local include files
@@ -62,9 +76,17 @@ MAIN:
 CODE    ENDS
 
 
-; the data segment 
+; Remote main shared variables.
 DATA    SEGMENT PUBLIC  'DATA'
-        ;nothing in the data segment but need it for initializaing DS.
+    state            DB  ?   ; state of remote main loop (based on received)
+    speed_index      DB  ?   ; current index in the speed buffer.
+    speed_buffer     DB BUFFER_SIZE DUP (?) ; speed status of motor.
+    direction_index  DB  ?   ; current index in the direction buffer.
+    direction_buffer DB BUFFER_SIZE DUP (?) ; direction status of motor.
+    error_index      DB  ?   ; current index in the error buffer.
+    error_buffer	 DB	BUFFER_SIZE	DUP (?) ; buffer of last motor error.
+    eventQueue       queueSTRUC<> ; Event queue. This is a word queue that
+                                 ; holds events.
 DATA    ENDS
 
 

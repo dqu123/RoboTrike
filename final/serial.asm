@@ -16,6 +16,7 @@
 ;
 ; Public functions:
 ; InitSerialVars()        - initializes serial shared variables.
+; SerialSendString        - sends a null terminated string to the serial channel.
 ; HandleSerial()          - handles serial interrupts.
 ; SerialPutChar(c)        - outputs a character to the serial channel.
 ; SetSerialBaudRate(rate) - sets the baud rate of the serial channel.
@@ -101,6 +102,7 @@ SerialErrorTable  LABEL   BYTE
         DB      PARITY_ERROR_BIT      ; errors. This table lets us loop
         DB      FRAMING_ERROR_BIT     ; through all the bits and process
         DB      BREAK_INT_BIT         ; them as separate events.
+SIZE_ERROR_TABLE        EQU     $ - SerialErrorTable
         
 ParityTable       LABEL   BYTE  
         DB      NO_PARITY             ; Table of parity bit patterns that
@@ -108,6 +110,7 @@ ParityTable       LABEL   BYTE
         DB      ODD_PARITY            ; Used by ToggleParity().
         DB      EVEN_STICK_PARITY
         DB      ODD_STICK_PARITY
+NUM_PARITY_OPTIONS      EQU     $ - ParityTable
         
 ; InitSerialVars()
 ; 
@@ -161,6 +164,76 @@ InitSerialVars  PROC     NEAR
 InitSerialVars  ENDP
 
 
+; SerialSendString(char* string) 
+; 
+; Description:       Sends the null terminated string in SI through the serial by 
+;                    calling SerialPutChar. Since SerialPutChar is not guaranteed 
+;                    to succeed, calls SerialPutChar repeatedly for each character
+;                    until SerialPutChar succeeds.
+; Operation:         Iterate through each character in the string and call
+;                    SerialPutChar repeatedly on that character until it works.
+;                    Stop when the ASCII_NULL character is reached.
+;
+; Arguments:         string (SI) - start address of a character ASCII string
+;                                  to send through the serial.
+; Return Value:      None.
+;
+; Local Variables:   index (BX) - index in the string.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   String - null terminated character (byte) array.   
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags, AL, BX, CX.
+; Special notes:     None.
+SerialSendString    PROC     NEAR
+                    PUBLIC   SerialSendString
+				
+        XOR     BX, BX          ; Start with first character (index = 0).
+
+SerialSendStringLoop:
+        XOR     CL, CL          ; Prepare inner loop index CL = 0 to
+                                ; retry SerialPutChar if it fails.
+        MOV     AL, SI[BX]      ; Get current character in string.
+        MOV     CH, AL          ; Save a copy in CH since AX may be used
+                                ; to call EnqueueEvent.
+        
+SerialSendStringResendChar:
+        CALL    SerialPutChar   ; Try to send it to serial.
+        JNC     SerialSendStringEndLoop ; CF is reset if serial put char was
+                                ; successful and reset otherwise. No error
+                                ; if CF is reset, so skip enqueuing an error.
+        INC     CL              ; update inner loop index CL
+        CMP     CL, 5           ; end when CL = 5 (do up to 5 times)
+        JNE     SerialSendStringResendChar ; Loop if CL < 5. 
+        ;JE     SerialSendStringError
+        
+SerialSendStringError:
+        MOV     AH, SERIAL_ERROR_EVENT  ; Encode serial error event type
+        MOV     AL, SIZE_ERROR_TABLE    ; Use index value of end of table
+                                        ; to denote a serial send string error.
+        CALL    EnqueueEvent            ; Enqueue error event.
+        
+SerialSendStringEndLoop:
+        INC     BX              ; Update index to next character.
+        CMP     CH, ASCII_NULL  ; Check if at end of string by looking for NULL.
+        JNE     SerialSendStringLoop ; If not at end, continue looping.
+        ;JE     EndSerialSendString              
+
+EndSerialSendString:
+        
+        RET
+
+SerialSendString    ENDP
 
 ; HandleSerial
 ; 

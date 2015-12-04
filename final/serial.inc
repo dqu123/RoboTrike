@@ -17,6 +17,7 @@
 ; Revision History:
 ;	 11/19/15  David Qu			initial revision
 ;    11/21/15  David Qu         updated queue length.
+;    12/3/15   David Qu         moved size_error_table to .asm. Added num_resend.
 
 SWITCH_TABLE_SHIFT    EQU     1   ; Amount to shift a valid interrupt (not 
                                   ; NONE_INTERRUPT) to convert it to a
@@ -29,5 +30,6 @@ TX_QUEUE_LENGTH       EQU     0   ; This is value passed to QueueInit, which
                                   ; of HW3's specification of queue.asm.
 TX_QUEUE_ELEMENT_SIZE EQU     1   ; byte sized elements for the txQueue since
                                   ; it holds characters.
-SIZE_ERROR_TABLE      EQU     4   ; Number of error bits in the LSR.
 INIT_PARITY_INDEX     EQU     0   ; initial value for parity shared variable. 
+NUM_RESEND            EQU     5   ; Number of times to try resend a character 
+                                  ; in SerialSendString.
