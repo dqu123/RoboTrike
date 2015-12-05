@@ -17,3 +17,6 @@ FALSE               EQU     0       ; Boolean false value.
 
 ASCII_NULL          EQU     0       ; ASCII decimal value for NULL character.
 ASCII_RETURN        EQU     13      ; ASCII decimal value for carriage return.
+
+WORD_SHIFT_TO_BYTE  EQU     1       ; Amount to shift a word index to convert it
+                                    ; to a byte index.

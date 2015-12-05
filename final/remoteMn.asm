@@ -466,14 +466,17 @@ InitRemoteMain      ENDP
 DoSerialErrorEvent  PROC     NEAR
                     PUBLIC   DoSerialErrorEvent
 
-        MOV     SI, OFFSET(RemoteSerialErrorTable)
-        XOR     AH, AH
-        IMUL    AX, AX, SERIAL_ERROR_STR_LENGTH
-        ADD     SI, AX
+        MOV     SI, OFFSET(RemoteSerialErrorTable)  ; Load table of error strings
+        XOR     AH, AH                              ; Extend AL to positive
+                                                    ; 16-bit index.
+        IMUL    AX, AX, SERIAL_ERROR_STR_LENGTH     ; Use 3 argument IMUL to
+                                                    ; avoid using another register.
+        ADD     SI, AX                              ; Load location of desired
+                                                    ; error string.
         
-        MOV     BX, CS
-        MOV     ES, BX
-        CALL    Display
+        MOV     BX, CS      ; Set ES to CS since the
+        MOV     ES, BX      ; error string is in code space.
+        CALL    Display     ; Display the error string.
         
         RET     
 
@@ -521,52 +524,64 @@ DoSerialErrorEvent  ENDP
 DoSerialDataEvent   PROC     NEAR
                     PUBLIC   DoSerialDataEvent
 
-        CMP     AL, 'S'
-        JE      DisplaySpeedCase
+        CMP     AL, 'S'                     ; The 'S' character signals that
+        JE      DisplaySpeedCase            ; a speed status is being sent.
         
-        CMP     AL, 'D' 
-        JE      DisplayDirectionCase
+        CMP     AL, 'D'                     ; The 'D' character signals that
+        JE      DisplayDirectionCase        ; a direction status is being sent.
         
-        CMP     AL, 'M'
-        JE      DisplayMotorSerialErrorCase
+        CMP     AL, 'M'                     ; The 'M' character signals that
+        JE      DisplayMotorSerialErrorCase ; a motor serial error is being
+                                            ; sent.
         
-        CMP     AL, 'P' 
-        JE      DisplayMotorParserErrorCase
-        JNE     DefaultCase
+        CMP     AL, 'P'                     ; The 'P' character signals that
+        JE      DisplayMotorParserErrorCase ; a motor parser error is being sent.
+        JNE     SerialDataDefaultCase       ; By default write to a buffer
+                                            ; determined by the state.
         
 DisplaySpeedCase:
-        MOV     state, SPEED_STATE
-        JMP     ResetIndex
+        MOV     state, SPEED_STATE          ; Read 'S', so go to SPEED_STATE.
+        JMP     ResetIndex                  ; Then reset index to prepare for
+                                            ; new writes.
 
 DisplayDirectionCase:
-        MOV     state, DIRECTION_STATE
-        JMP     ResetIndex        
+        MOV     state, DIRECTION_STATE      ; Read 'D', so go to DIRECTION_STATE.
+        JMP     ResetIndex                  ; Then reset index to prepare for
+                                            ; new writes.
 
 DisplayMotorSerialErrorCase:
-        MOV     state, ERROR_STATE
-        MOV     error_buffer, 'M'
-        JMP     ResetIndex
+        MOV     state, ERROR_STATE          ; Read 'M', so go to ERROR_STATE.
+        MOV     error_buffer, 'M'           ; Write the appropriate first char,
+        JMP     ResetIndex                  ; and reset index to prepare for
+                                            ; new writes.
         
 DisplayMotorParserErrorCase:
-        MOV     state, ERROR_STATE
-        MOV     error_buffer, 'P'
-        ;JMP    ResetIndex
+        MOV     state, ERROR_STATE          ; Read 'P', so go to ERROR_STATE.
+        MOV     error_buffer, 'P'           ; Write the appropriate first char,
+        ;JMP    ResetIndex                  ; and reset index to prepare for
+                                            ; new writes.
         
 ResetIndex:
-        MOV     index, 1
-        JMP     EndSerialDataEvent
+        MOV     index, 1                    ; Start at index of 1 in the buffer
+        JMP     EndSerialDataEvent          ; because the 0 index is reserved
+                                            ; to denote the buffer type to the
+                                            ; user.
 
-DefaultCase:
-        MOV     SI, OFFSET(speed_buffer)
-        XOR     BH, BH
-        MOV     BL, state
-        IMUL    BX, BX, BUFFER_SIZE
-        MOV     CL, index
-        XOR     CH, CH
-        ADD     BX, CX
-        MOV     [SI + BX], AL
-        MOV     BYTE PTR [SI + BX + 1], ASCII_NULL
-        INC     index
+SerialDataDefaultCase:
+        MOV     SI, OFFSET(speed_buffer)    ; Start with the address of the
+                                            ; speed buffer since it is the
+                                            ; first buffer.
+        XOR     BH, BH                      ; Determine the offset of the
+        MOV     BL, state                   ; appropriate buffer by the state
+        IMUL    BX, BX, BUFFER_SIZE         ; shared variable.
+        MOV     CL, index                   ; The index gives the character
+        XOR     CH, CH                      ; offset in the
+        ADD     BX, CX                      ; Perform word addition.
+        MOV     [SI + BX], AL               ; Write character to buffer.
+        MOV     BYTE PTR [SI + BX + 1], ASCII_NULL ; NULL terminate buffer.
+        INC     index                       ; Update index shared variable to
+                                            ; indicate next available buffer
+                                            ; location.
         ;JMP    EndSerialDataEvent
 
 EndSerialDataEvent:
@@ -616,16 +631,18 @@ DoSerialDataEvent   ENDP
 DoKeypadEvent   PROC     NEAR
                 PUBLIC   DoKeypadEvent
                     
-        XOR     BH, BH
-        MOV     BL, AL
-        SHL     BX, 1
-        CALL    KeyActionTable[BX]
+        XOR     BH, BH                 ; Clear top byte since reading byte-sized
+        MOV     BL, AL                 ; index. Get index from AL to BL, so we
+                                       ; can index into a table.
+        SHL     BX, WORD_SHIFT_TO_BYTE ; Convert from word index to byte index.
+        CALL    KeyActionTable[BX]     ; Call the appropriate function to handle
+                                       ; the specific keycode.
 
 EndDoKeypadEvent:
-        
         RET     
 
 DoKeypadEvent   ENDP
+
 
 ; SendKeypadCommand(keycode)
 ; 
@@ -661,22 +678,25 @@ DoKeypadEvent   ENDP
 SendKeypadCommand   PROC     NEAR
                     PUBLIC   SendKeypadCommand
                     
-        MOV     BX, CS
-        MOV     ES, BX
+        MOV     BX, CS  ; Display displays the string in ES:SI, so
+        MOV     ES, BX  ; we set ES to CS, since our command strings are
+                        ; constant and stored in the code segment.
         
-        MOV     SI, OFFSET(KeypadCommandTable)
-        XOR     AH, AH
-        IMUL    AX, AX, KEYPAD_COMMAND_STR_LENGTH
-        ADD     SI, AX
-        CALL    Display
+        MOV     SI, OFFSET(KeypadCommandTable)      ; Start with base address
+        XOR     AH, AH                              ; of the command table, 
+        IMUL    AX, AX, KEYPAD_COMMAND_STR_LENGTH   ; and add in the index,
+        ADD     SI, AX                              ; converting it to bytes
+                                              ; using KEYPAD_COMMAND_STR_LENGTH
+                                              
+        CALL    Display             ; Display the command string to the user.
         
-        CALL    SerialSendString
+        CALL    SerialSendString    ; Send the command string to the motor unit.
 
-EndSendKeypadCommand:
-        
+EndSendKeypadCommand: 
         RET     
 
 SendKeypadCommand   ENDP
+
 
 ; DisplayBuffer()
 ; 
