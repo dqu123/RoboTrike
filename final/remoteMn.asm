@@ -129,7 +129,6 @@ RemoteEventActionTable LABEL   WORD ; Table of functions for
         DW      DoKeypadEvent       ; the switch statement in 
         DW      DoSerialErrorEvent  ; the remote main loop. These functions handle
         DW      DoSerialDataEvent   ; various event types.     
-        DW      DoNOP
 
         
 ; KeypadActionTable 
