@@ -12,9 +12,9 @@
 ;	 11/5/15  David Qu			initial revision
 ;    11/19/15 David Qu          changed to 0 index, and added serial events
 ;    11/30/15 David Qu          revised event numbering 
+;    12/4/15  David Qu          removed parser error event
 
 ; Remote Event constants
 KEYPRESS_EVENT      EQU     0       ; Value for a keypress event. 
 SERIAL_ERROR_EVENT  EQU     2       ; Value for a serial error event.
 SERIAL_DATA_EVENT   EQU     4       ; Value for a serial data event.
-PARSER_ERROR_EVENT  EQU     6       ; Value for a parser error event.

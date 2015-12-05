@@ -321,15 +321,15 @@ CheckSpeed:
         JE     CheckAngle               ; then it is ignored.
         
 SetTotalSpeed:
+        MOV     total_speed, AX         ; Sets the total_speed shared variable
         SHR     AX, POSITIVE_Q0_15_SHIFT; Convert from a word unsigned speed to
                                         ; a positive Q0.15 value.
-        MOV     total_speed, AX         ; Sets the total_speed shared variable
         ;JMP    CheckAngle              ; to the given value.
 
 CheckAngle:
         CMP     BX, NO_ANGLE_CHANGE     ; Check if the angle needs to be set.
-        ;JME    SetTotalAngle         ; If new_angle == NO_ANGLE_CHANGE,
-        JE     SetMotorSpeedLoop       ; then it is ignored.
+        ;JME    SetTotalAngle           ; If new_angle == NO_ANGLE_CHANGE,
+        JE     SetMotorSpeedLoop        ; then it is ignored.
         
 SetTotalAngle:
         MOV     AX, BX                  ; Sets the angle shared variable to
@@ -551,6 +551,106 @@ GetLaser        PROC     NEAR
         RET
 
 GetLaser        ENDP
+
+
+; SetTurretAngle
+; 
+; Description:       Stub for unimplemented function.
+; Operation:         Does nothing.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: None.
+; Special notes:     None.
+ 
+SetTurretAngle  PROC     NEAR
+                PUBLIC   SetTurretAngle
+                
+        RET
+
+SetTurretAngle  ENDP
+
+; SetRelTurretAngle
+; 
+; Description:       Stub for unimplemented function.
+; Operation:         Does nothing.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: None.
+; Special notes:     None.
+ 
+SetRelTurretAngle  PROC     NEAR
+                   PUBLIC   SetRelTurretAngle
+                
+        RET
+
+SetRelTurretAngle  ENDP
+
+; SetTurretElevation
+; 
+; Description:       Stub for unimplemented function.
+; Operation:         Does nothing.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.    
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: None.
+; Special notes:     None.
+ 
+SetTurretElevation  PROC     NEAR
+                    PUBLIC   SetTurretElevation
+                
+        RET
+
+SetTurretElevation  ENDP
 
 
 
