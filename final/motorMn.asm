@@ -337,14 +337,22 @@ MtrSendStatus:
                 
         CALL    GetMotorSpeed
         MOV     str_buffer, 'S'
-
+        
+ConvertSpeed:
         CALL    UnsignedDec2String
+MtrSendSpeed:
+        DEC     SI
         CALL    SerialSendString
         
         CALL    GetMotorDirection
         MOV     str_buffer, 'D'
         
+ConvertDirection:
+        INC     SI
         CALL    Dec2String
+        
+MtrSendDirection:
+        DEC     SI
         CALL    SerialSendString
 
 EndMtrSerialDataEvent:   
