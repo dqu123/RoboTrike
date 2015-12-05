@@ -330,7 +330,7 @@ MtrSendParserError:
         MOV     BX, CS      ; Set ES to CS since the
         MOV     ES, BX      ; error string is in code space.
         CALL    SerialSendString ; Display the error string.
-        JMP     MtrSerialDataEvent
+        JMP     EndMtrSerialDataEvent
         
 MtrSendStatus:     
         MOV     BX, DS
@@ -367,11 +367,11 @@ MtrCheckLaser:
 		;JNZ	SendLaserOnStatus
 		
 SendLaserOnStatus:
-		MOV		SI, OFFSET(LaserOnStr)
+		MOV		SI, OFFSET(LaserOnString)
 		JMP		MtrSendLaserStatus
 		
 SendLaserOffStatus:
-		MOV		SI, OFFSET(LaserOffStr)
+		MOV		SI, OFFSET(LaserOffString)
 		JMP		MtrSendLaserStatus
 		
 MtrSendLaserStatus:

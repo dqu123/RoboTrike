@@ -35,25 +35,29 @@
 ; 12 13 14 15
 ; 
 ; The keypad is a 4x4 grid of keys as depicted above. 
-; Currently, buttons 0-3 are unused, and multiple button combinations are
-; unused, but new button functions could be easily added. Buttons 4-15 are
-; used and their functions are described below:
+; Currently, multiple button combinations are unused, but new button functions 
+; could be easily added by changing the KeyActionTable.
 ;
-; Button  3 -
-; Button  4 - sends the max speed command to go full speed in the current direction.
-; Button  5 - displays the speed status of the motor (last value received from the
-;             motor unit via serial).
-; Button  6 - displays the direction status of the motor (last value received
-;             from the motor unit via serial).
-; Button  7 - displays the last motor error received.
-; Button  8 - fires the laser
-; Button  9 - slows down 
-; Button 10 - increases speed by 1000 (max is 65534).
-; Button 11 - stops the motor
-; Button 12 - turns off the laser
-; Button 13 - increases the angle by 30 degrees (counterclockwise)
-; Button 14 - turns the RoboTrike around (still goes at the same speed)
-; Button 15 - decreases the angle by 30 degrees (clockwise)
+; Single button functions: 
+;     Button  0 - reset the system.
+;     Button  1 - unused
+;     Button  2 - unused
+;     Button  3 - displays the last motor error received.
+;     Button  4 - sends the max speed command to go full speed in the current 
+;				  direction.
+; 	  Button  5 - displays the speed status of the motor (last value received 
+;				  from the motor unit via serial).
+;     Button  6 - displays the direction status of the motor (last value received
+;                 from the motor unit via serial).
+;     Button  7 - displays the laser status.
+;     Button  8 - fires the laser
+;     Button  9 - slows down 
+;     Button 10 - increases speed by 1000 (max is 65534).
+;     Button 11 - stops the motor
+;     Button 12 - turns off the laser
+;     Button 13 - increases the angle by 30 degrees (counterclockwise)
+;     Button 14 - turns the RoboTrike around (still goes at the same speed)
+;     Button 15 - decreases the angle by 30 degrees (clockwise)
 ; 
 ;       
 ; Error Handling:   There is an error buffer which contains the most recent
@@ -174,14 +178,14 @@ KeyActionTable      LABEL   WORD
         DW      DoNOP       ; 04H
         DW      DoNOP       ; 05H
         DW      DoNOP       ; 06H
-        DW      DoNOP       ; 07H  Button 3
+        DW      DisplayErrorBuffer ; 07H  Button 3 (Displays the error buffer).
         DW      DoNOP       ; 08H 
         DW      DoNOP       ; 09H 
         DW      DoNOP       ; 0AH
         DW      DoNOP       ; 0BH  Button 2
         DW      DoNOP       ; 0CH 
         DW      DoNOP       ; 0DH  Button 1
-        DW      DoNOP       ; 0EH  Button 0
+        DW      SystemReset ; 0EH  Button 0 (Reset the system).
         DW      DoNOP       ; 0FH
         
         ; Row 1 of keypad
@@ -192,7 +196,7 @@ KeyActionTable      LABEL   WORD
         DW      DoNOP       ; 14H
         DW      DoNOP       ; 15H
         DW      DoNOP       ; 16H
-        DW      DisplayErrorBuffer ; 17H  Button 7 (Display error)
+        DW      DisplayLaserBuffer ; 17H  Button 7 (Display error)
         DW      DoNOP       ; 18H 
         DW      DoNOP       ; 19H 
         DW      DoNOP       ; 1AH
@@ -307,7 +311,7 @@ SERIAL_ERROR_STR_LENGTH	    EQU	    %length - 1	; the length of the table string
 ; 12 13 14 15
 ;
 ; Author:           David Qu
-; Last Modified:    Nov. 30, 2015                   
+; Last Modified:    Dec. 5, 2015                   
 
 %*DEFINE(STRFIXTABLE)  (
 	%SET(length, 0)			;don't know length yet
@@ -344,7 +348,7 @@ SERIAL_ERROR_STR_LENGTH	    EQU	    %length - 1	; the length of the table string
         %TABENT('      ')   ; 1BH  Button 6 (Display direction)
         %TABENT('      ')   ; 1CH 
         %TABENT('      ')   ; 1DH  Button 5 (Display speed)
-        %TABENT('S65534')   ; 1EH  Button 4 (Full speed ahead)
+        %TABENT('      ')   ; 1EH  Button 4 (Full speed ahead)
         %TABENT('      ')   ; 1FH
         
         ; Row 2 of keypad
@@ -864,6 +868,45 @@ DisplayDirectionBuffer   PROC     NEAR
         RET     
 
 DisplayDirectionBuffer   ENDP
+
+
+; DisplayLaserBuffer()
+; 
+; Description:       Displays the laser buffer by loading ES:SI with the address
+;                    of the speed buffer, and calling display. 
+; Operation:         Calls display with ES = DS, and SI = OFFSET(laser_buffer).
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Reads from the laser_buffer - buffer to store laser status.
+; Global Variables:  None.
+;
+; Input:             Key presses generate keypress events through the keypad
+;                    event handler which debounces on a timer repeat.
+; Output:            Displays a string from the speed_buffer.
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   laser_buffer - string buffer of laser status.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags, BX, ES, SI.
+; Special notes:     None.
+DisplayLaserBuffer   PROC     NEAR
+        
+        MOV     BX, DS  ; The laser buffer is in the data segment,
+        MOV     ES, BX  ; so we must set ES = DS since Display uses ES:SI
+        
+        MOV     SI, OFFSET(laser_buffer) ; Load the address of the speed buffer
+        CALL    Display                  ; in SI and then display it to the user.
+        
+        RET     
+
+DisplayLaserBuffer   ENDP
 
 
 ; DisplayErrorBuffer()
