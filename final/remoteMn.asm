@@ -1052,6 +1052,7 @@ SystemReset  	PROC     NEAR
 		MOV     BX, CS  ; The command and message are in the code segment,
         MOV     ES, BX  ; so we must set ES = CS since Display uses ES:SI.
         
+SystemSendStop:
 		MOV		SI, OFFSET(StopCommand)     ; Load the address of the command
 		CALL	SerialSendString			; and send it to the motor via serial.
 		
