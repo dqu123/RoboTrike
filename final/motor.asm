@@ -321,15 +321,15 @@ CheckSpeed:
         JE     CheckAngle               ; then it is ignored.
         
 SetTotalSpeed:
-        SHR     AX, POSITIVE_Q0_15_SHIFT; Convert from a word unsigned speed to
-                                        ; a positive Q0.15 value.
-        MOV     total_speed, AX         ; Sets the total_speed shared variable                                
-        ;JMP    CheckAngle              ; to the given value.
+		MOV     total_speed, AX         ; Sets the total_speed shared variable
+										; to the given value.
+                         
+        ;JMP    CheckAngle              
 
 CheckAngle:
         CMP     BX, NO_ANGLE_CHANGE     ; Check if the angle needs to be set.
-        ;JME    SetTotalAngle           ; If new_angle == NO_ANGLE_CHANGE,
-        JE     SetMotorSpeedLoop        ; then it is ignored.
+        ;JNE    SetTotalAngle           ; If new_angle == NO_ANGLE_CHANGE,
+        JE      SetMotorSpeedLoop       ; then it is ignored.
         
 SetTotalAngle:
         MOV     AX, BX                  ; Sets the angle shared variable to
@@ -351,7 +351,9 @@ UpdateAngle:
 
         XOR     BX, BX                 ; Clear index variable for loop.
 SetMotorSpeedLoop:
-        MOV     AX, total_speed        ; Prepare to compute 
+        MOV     AX, total_speed        ; Prepare to compute forces. 
+        SHR     AX, POSITIVE_Q0_15_SHIFT; Convert from a word unsigned speed to
+                                        ; a positive Q0.15 value.   
         MOV     SI, angle              ; Compute byte index in trig tables to   
         SHL     SI, TRIG_TABLE_SHIFT   ; compute cos(a) and sin(a).
         
@@ -434,7 +436,6 @@ GetMotorSpeed      PROC     NEAR
                    PUBLIC   GetMotorSpeed
 
         MOV     AX, total_speed ; Gets total_speed.
-        SHL     AX, 1           ; Have to convert back.
         RET
 
 GetMotorSpeed      ENDP

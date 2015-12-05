@@ -35,13 +35,16 @@
 ; 12 13 14 15
 ; 
 ; The keypad is a 4x4 grid of keys as depicted above. 
-; Currently, multiple button combinations are unused, but new button functions 
+; Currently, most multiple button combinations are unused, but new button functions 
 ; could be easily added by changing the KeyActionTable.
 ;
+; Multiple button combinations:
+;	  Button 1 + 2 - reset blink rate settings.
+; 
 ; Single button functions: 
 ;     Button  0 - reset the system.
-;     Button  1 - unused
-;     Button  2 - unused
+;     Button  1 - increase on_time and affect blink rate and brightness*
+;     Button  2 - increase off_time and affect blink rate and brightness*
 ;     Button  3 - displays the last motor error received.
 ;     Button  4 - sends the max speed command to go full speed in the current 
 ;				  direction.
@@ -59,6 +62,12 @@
 ;     Button 14 - turns the RoboTrike around (still goes at the same speed)
 ;     Button 15 - decreases the angle by 30 degrees (clockwise)
 ; 
+; *Blink rate and brightness are determined by the on_time and off_time.
+; The display is displayed for on_time counts and then off_time counts in a
+; periodic manner. To blink the display, increase both on_time and off_time
+; to roughly equivalent counts. The higher the total count, the more time
+; between blinks. To lower the brightness, just increase the off_time. The
+; default blink setting is max brightness and no blinking.
 ;       
 ; Error Handling:   There is an error buffer which contains the most recent
 ;                   error that has occurred. It can be accessed by a button in
@@ -130,6 +139,9 @@ CODE    SEGMENT PUBLIC 'CODE'
         EXTRN   GetCriticalError:NEAR       ;Determine if a critical error has
                                             ;occurred in the system.
         EXTRN   DoNOP:NEAR                  ;Does nothing.
+		EXTRN	IncreaseOnTime:NEAR			;Increases ontime shared variable.
+		EXTRN	IncreaseOffTime:NEAR		;Increases offtime shared variable.
+		EXTRN 	ResetBlinkRate:NEAR			;Resets to default blink rate.
 
 ; Constant strings and tables 
 ResetSystemMessage		LABEL	BYTE ; Message to send to user about resetting the
@@ -143,6 +155,10 @@ MaxSpeedCommand		LABEL	BYTE ; Command sequence to obtain max speed.
 								 ; The ASCII_RETURNs are needed to register as
 								 ; RoboTrike commands in the parser.
 DB		'S32767', ASCII_RETURN, 'V32767', ASCII_RETURN, ASCII_NULL
+
+StopCommand			LABEL	BYTE ; Return/Null terminated RoboTrike command that
+								 ; stops the RoboTrike. 
+DB		'S0', ASCII_RETURN, ASCII_NULL
 
 
 ; Read-only tables
@@ -168,7 +184,7 @@ RemoteEventActionTable LABEL   WORD ; Table of functions for
 ; 12 13 14 15
 ;
 ; Author:           David Qu
-; Last Modified:    Dec. 4, 2015 
+; Last Modified:    Dec. 5, 2015 
 KeyActionTable      LABEL   WORD
         ; Row 0 of keypad
         DW      DoNOP       ; 00H 
@@ -180,11 +196,11 @@ KeyActionTable      LABEL   WORD
         DW      DoNOP       ; 06H
         DW      DisplayErrorBuffer ; 07H  Button 3 (Displays the error buffer).
         DW      DoNOP       ; 08H 
-        DW      DoNOP       ; 09H 
+        DW      ResetBlinkRate ; 09H  Button 1 + button 2
         DW      DoNOP       ; 0AH
-        DW      DoNOP       ; 0BH  Button 2
+        DW      IncreaseOffTime ; 0BH  Button 2
         DW      DoNOP       ; 0CH 
-        DW      DoNOP       ; 0DH  Button 1
+        DW      IncreaseOnTime  ; 0DH  Button 1
         DW      SystemReset ; 0EH  Button 0 (Reset the system).
         DW      DoNOP       ; 0FH
         
@@ -997,10 +1013,14 @@ SendMaxSpeed  ENDP
 
 ; SystemReset()
 ; 
-; Description:       Resets the system at the request of the user.
-; Operation:         Turns off interrupts, resets the system, writes the status
-;				     message notifying the user, and then turns interrupts back
-;					 on.
+; Description:       Resets the system at the request of the user. This includes
+;					 reinitializing the remote board, and stopping the RoboTrike. 
+;					 Note that this does not reset the motor board, and only 
+;					 sends a stop command to the motor board.
+; Operation:         First sends the stop command to the motor unit. 
+;					 Then turns off interrupts, resets the system, writes the 
+;					 status message notifying the user, and then turns 
+;				     interrupts back on.
 ;
 ; Arguments:         None.
 ; Return Value:      None.
@@ -1010,9 +1030,9 @@ SendMaxSpeed  ENDP
 ; Global Variables:  None.
 ;
 ; Input:             Key presses generate keypress events through the keypad
-;                    event handler which debounces on a timer repeat.
-;                    
-; Output:            Displays a string message indicating that the RoboTrike
+;                    event handler which debounces on a timer repeat.                    
+; Output:            Sends the stop string to the motor unit. 
+;					 Displays a string message indicating that the RoboTrike
 ;					 remote system was reset.
 ; Error Handling:    None.
 ;
@@ -1032,6 +1052,9 @@ SystemReset  	PROC     NEAR
 		MOV     BX, CS  ; The command and message are in the code segment,
         MOV     ES, BX  ; so we must set ES = CS since Display uses ES:SI.
         
+		MOV		SI, OFFSET(StopCommand)     ; Load the address of the command
+		CALL	SerialSendString			; and send it to the motor via serial.
+		
         MOV     SI, OFFSET(ResetSystemMessage) ; Load the address of the message 
         CALL    Display                 ; in SI and then display it to the user.
 		

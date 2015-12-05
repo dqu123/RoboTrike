@@ -16,6 +16,9 @@
 ; 	Display		- adds segment bit pattern of a string to the display_buffer.
 ;	DisplayNum	- adds segment bit pattern of a decimal num to the display_buffer.
 ;	DisplayHex	- adds segment bit pattern of a hex number to the display_buffer.
+;   IncreaseOnTime - increases the on_time shared variable. 
+;   IncreaseOffTime - increases the off_time shared variable.
+;   ResetBlinkRate - reset on_time and off_time shared variables.
 ;
 ; Local functions:
 ;	ClearDisplay - sets all the bits in the display_buffer to 0.
@@ -472,6 +475,108 @@ EndDisplayHex:
 		
 DisplayHex		ENDP
 
+; IncreaseOnTime()
+; 
+; Description:       Increases the on_time shared variable by TIME_INCREMENT.
+; Operation:         Increases the on_time shared variable by TIME_INCREMENT.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Writes to the on_time shared variable which affects the
+;				         brightness and blink rate.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: None.
+; Special notes:     None.
+IncreaseOnTime  PROC     NEAR
+				PUBLIC	 IncreaseOnTime
+        
+		ADD		on_time, TIME_INCREMENT
+		
+        RET     
+
+IncreaseOnTime 	ENDP
+
+; IncreaseOffTime()
+; 
+; Description:       Increases the off_time shared variable by TIME_INCREMENT.
+; Operation:         Increases the off_time shared variable by TIME_INCREMENT.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Writes to the on_time shared variable which affects the
+;				         brightness and blink rate.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: None.
+; Special notes:     None.
+IncreaseOffTime  PROC     NEAR
+				 PUBLIC	  IncreaseOffTime
+				
+		ADD		off_time, TIME_INCREMENT
+		
+        RET     
+
+IncreaseOffTime 	ENDP
+
+; ResetBlinkRate()
+; 
+; Description:       Reverts to the default blink rate and brightness.
+; Operation:         Sets on_time = DEFAULT_ON_TIME, and off_time = DEFAULT_OFF_TIME.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Writes to the on_time and off_time shared variables which 
+;					     affect the brightness and blink rate.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: None.
+; Special notes:     None.
+ResetBlinkRate   PROC  		NEAR
+				 PUBLIC		ResetBlinkRate 
+				
+		MOV		on_time, DEFAULT_ON_TIME
+		MOV		off_time, DEFAULT_OFF_TIME
+		
+        RET     
+
+ResetBlinkRate	 ENDP
 
 CODE	ENDS
 

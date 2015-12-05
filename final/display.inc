@@ -25,8 +25,10 @@ BLANK_SEG_PATTERN	EQU		0	; Bit pattern for a blank digit.
 LEDDisplay      EQU     0000H   ; display port start address.
 SEG14_OFFSET	EQU		8		; Offset of byte that controls the last 7 segments
 								; of a 14 segment display.
-DEFAULT_ON_TIME		EQU		128	; Default on time per cycle in timer counts.
+DEFAULT_ON_TIME		EQU		1	; Default on time per cycle in timer counts.
 DEFAULT_OFF_TIME	EQU		0	; Default off time per cycle in timer counts.
 NUM_DIGITS			EQU		8   ; Number of digits in the display. Code assumes
 								; this is a power of 2 to simplify modular
 								; arithmetic.
+TIME_INCREMENT		EQU 	1   ; Amount to change shared variables to affect
+								; the blink rate and brightness.
