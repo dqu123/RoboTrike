@@ -7,13 +7,21 @@
 ;                                  David Qu                                  ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Description:      This
+; Description:      Main loop for the motor unit. First initializes the chip 
+;					select, event queue, serial, motor, parser and interrupts. 
+;					Then processes events in the event queue using a switch 
+;					table. Events are added by the interrupt handlers.
 ;
-; Input:            None.
-; Output:           None.
+; Input:            Serial data from the remote unit.
+; Output:           motor - the motor will rotate according to shared variables 
+;							in the motor module.
+;					serial - the motor unit will send back status messages and
+;						     error messages via serial. 
 ;
-; User Interface:   The user can press buttons on the
-; Error Handling:   None.
+; User Interface:   While the user cannot directly interface with the motor unit
+;					board, the motor receives command messages via serial.
+; Error Handling:   If an error occurs, an appropriate message is sent to the
+;					remote unit to be displayed to the user.
 ;
 ; Algorithms:       None.
 ; Data Structures:  None.
@@ -23,6 +31,7 @@
 ;
 ; Revision History:
 ;    12/3/15  David Qu	               initial revision
+;    12/4/15  David Qu				   added comments
 ;
 ; local include files
 $INCLUDE(general.inc)
@@ -186,17 +195,6 @@ CheckForCriticalError:
 ;
 ; Registers Changed: flags, AX.
 ; Special notes:     None.
-;
-; Pseudo code:
-; SetupStack()
-; InitCS()
-; ClrIRQVectors()
-; QueueInit(eventQueue, 0, WORD_SIZE)
-; InitSerialVars()
-; InitSerialChip()
-; INSTALL_HANDLER(INT_14, INT_14_SEGMENT, HandleSerial)
-; InitParser()
-; STI
 InitMotorMain      PROC     NEAR
                    PUBLIC   InitMotorMain
         
@@ -311,11 +309,7 @@ DoSerialErrorEvent  ENDP
 ; Limitations:       None.
 ;
 ; Registers Changed: flags, AX.
-; Special notes:     None.
-;
-; Pseudo code:
-; if ParseSerialChar(char) == PARSER_ERROR:
-;      SerialSendString(ParserError)       
+; Special notes:     None.   
 MtrSerialDataEvent  PROC     NEAR
 
         CALL    ParseSerialChar

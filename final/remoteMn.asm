@@ -17,6 +17,7 @@
 ; Output:           Display - status and error strings appear on the display
 ;                             as buttons are pressed and serial events are
 ;                             processed.
+;			 		Serial  - RoboTrike command strings are sent to the 
 ;
 ; User Interface:   The user can press buttons on the keypad to read status/error 
 ;                   buffers, and send commands to the motor unit. Each keypress
@@ -71,6 +72,8 @@
 ; DisplaySpeedBuffer - display the speed buffer to the user.
 ; DisplayDirectionBuffer - display the direction buffer to the user.
 ; DisplayErrorBuffer - display the error buffer to the user.
+; SendMaxSpeed 	     - displays the max speed message, and sends the max string
+;					   command sequence to the motor unit.
 ;
 ; Tables:
 ; RemoteEventActionTable - actions for each remote event in a switch table.
@@ -116,9 +119,18 @@ CODE    SEGMENT PUBLIC 'CODE'
         EXTRN   GetCriticalError:NEAR       ;Determine if a critical error has
                                             ;occurred in the system.
         EXTRN   DoNOP:NEAR                  ;Does nothing.
-        
-; Read-only tables
 
+; Constant strings and tables       
+MaxSpeedMessage		LABEL	BYTE ; Message to send to user about setting max speed.
+DB		'MAXSPEED', ASCII_NULL
+
+MaxSpeedCommand		LABEL	BYTE ; Command sequence to obtain max speed.
+								 ; The ASCII_RETURNs are needed to register as
+								 ; RoboTrike commands in the parser.
+DB		'S32767', ASCII_RETURN, 'V32767', ASCII_RETURN, ASCII_NULL
+
+
+; Read-only tables
 ; RemoteEventActionTable 
 ; Description:      This table contains the function that should be performed
 ;                   when a specific event type is processed.
@@ -176,7 +188,7 @@ KeyActionTable      LABEL   WORD
         DW      DisplayDirectionBuffer ; 1BH  Button 6 (Display direction)
         DW      DoNOP       ; 1CH 
         DW      DisplaySpeedBuffer ; 1DH  Button 5 (Display speed)
-        DW      SendKeypadCommand ; 1EH  Button 4 (Full speed ahead)
+        DW      SendMaxSpeed ; 1EH  Button 4 (Full speed ahead)
         DW      DoNOP       ; 1FH
         
         ; Row 2 of keypad
@@ -416,11 +428,10 @@ CheckForCriticalError:
 ;                    interrupts.
 ; Operation:         Calls InitCS, ClrIRQVectors. Then calls QueueInit on
 ;                    eventQueue, sets speed_buffer[0] = 'S' (since we use S to 
-;                    denote a speed status), speed_index = 1,
-;                    direction_buffer[0] = 'D' (D denotes direction status),
-;                    direction_index = 1, and error_index = 0. Initializes the
-;                    serial by calling InitSerialVars and InitSerialchip and
-;                    installing the serial handler. Installs and initializes the 
+;                    denote a speed status), index = 1, direction_buffer[0] = 'D' 
+;					 (D denotes direction status). Initializes the serial by 
+;					 calling InitSerialVars and InitSerialchip and installing 
+;				     the serial handler. Installs and initializes the 
 ;                    display, keypad and associated timers by calls to the 
 ;                    appropriate functions. Finally allows interrupts.
 ;
@@ -452,7 +463,6 @@ CheckForCriticalError:
 ; Registers Changed: flags.
 ; Special notes:     None.
 InitRemoteMain      PROC     NEAR
-                    PUBLIC   InitRemoteMain
         
         CALL    InitCS                  ;initialize the 80188 chip selects
                                         ;   assumes LCS and UCS already setup
@@ -461,7 +471,8 @@ InitRemoteMain      PROC     NEAR
 
         CALL    InitEvents              ;initialize event queue.
         MOV     state, SPEED_STATE      ;start at SPEED_STATE in remote parser.
-        MOV     index, 1                ;start with index of 1.
+        MOV     index, 1                ;start with index of 1 because index 0
+										;is reserved.
         MOV     speed_buffer, 'S'       ;start with an 'S' in speed buffer,
         MOV     direction_buffer, 'D'   ;and a 'D' in the direction buffer.
         
@@ -521,7 +532,6 @@ InitRemoteMain      ENDP
 ; Registers Changed: flags, SI, AX, BX. ES.
 ; Special notes:     None.
 DoSerialErrorEvent  PROC     NEAR
-                    PUBLIC   DoSerialErrorEvent
 
         MOV     SI, OFFSET(RemoteSerialErrorTable)  ; Load table of error strings
         XOR     AH, AH                              ; Extend AL to positive
@@ -579,7 +589,6 @@ DoSerialErrorEvent  ENDP
 ; Registers Changed: flags.
 ; Special notes:     None.
 DoSerialDataEvent   PROC     NEAR
-                    PUBLIC   DoSerialDataEvent
 
         CMP     AL, 'S'                     ; The 'S' character signals that
         JE      DisplaySpeedCase            ; a speed status is being sent.
@@ -632,7 +641,7 @@ SerialDataDefaultCase:
         MOV     BL, state                   ; appropriate buffer by the state
         IMUL    BX, BX, BUFFER_SIZE         ; shared variable.
         MOV     CL, index                   ; The index gives the character
-        XOR     CH, CH                      ; offset in the
+        XOR     CH, CH                      ; offset in the buffer.
         ADD     BX, CX                      ; Perform word addition.
         MOV     [SI + BX], AL               ; Write character to buffer.
         MOV     BYTE PTR [SI + BX + 1], ASCII_NULL ; NULL terminate buffer.
@@ -686,7 +695,6 @@ DoSerialDataEvent   ENDP
 ; Registers Changed: flags.
 ; Special notes:     None.
 DoKeypadEvent   PROC     NEAR
-                PUBLIC   DoKeypadEvent
                     
         XOR     BH, BH                 ; Clear top byte since reading byte-sized
         MOV     BL, AL                 ; index. Get index from AL to BL, so we
@@ -733,7 +741,6 @@ DoKeypadEvent   ENDP
 ; Registers Changed: flags.
 ; Special notes:     None.
 SendKeypadCommand   PROC     NEAR
-                    PUBLIC   SendKeypadCommand
                     
         MOV     BX, CS  ; Display displays the string in ES:SI, so
         MOV     ES, BX  ; we set ES to CS, since our command strings are
@@ -872,6 +879,52 @@ DisplayErrorBuffer  PROC     NEAR
 
 DisplayErrorBuffer  ENDP
 
+
+; SendMaxSpeed()
+; 
+; Description:       Sends the max speed command, which the null terminated 
+;				     RoboTrike command string located at the label MaxSpeedCommand.
+;                    Also displays a message indicating max speed was set.
+; Operation:         Sets ES to CS because we are accessing constant strings.
+;                    Calls Display on the MaxSpeedMessage label, then
+;					 calls SerialSendString on MaxSpeedCommand. 
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             Key presses generate keypress events through the keypad
+;                    event handler which debounces on a timer repeat.
+;                    
+; Output:            Displays the string message indicating that the RoboTrike
+;					 was set to max speed.
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   constant strings - null terminated character arrays.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags, BX, ES, SI.
+; Special notes:     None.
+SendMaxSpeed  PROC     NEAR
+        
+        MOV     BX, CS  ; The command and message are in the code segment,
+        MOV     ES, BX  ; so we must set ES = CS since Display uses ES:SI.
+        
+        MOV     SI, OFFSET(MaxSpeedMessage) ; Load the address of the message 
+        CALL    Display                  ; in SI and then display it to the user.
+        
+		MOV		SI, OFFSET(MaxSpeedCommand) ; Load the address of the command
+		CALL	SerialSendString			; and send it to the motor via serial.
+		
+        RET     
+
+SendMaxSpeed  ENDP
 
 CODE    ENDS
 
