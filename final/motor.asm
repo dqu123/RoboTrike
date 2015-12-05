@@ -509,6 +509,9 @@ GetMotorDirection  ENDP
 SetLaser        PROC     NEAR
                 PUBLIC   SetLaser
 
+		OR		AL, AH	     ; See if any bits set, since we store a byte
+							 ; internally, but the functional specification 
+							 ; says to use AX for laser status.
         MOV     laserOn, AL  ; Sets laserOn.
         RET
 

@@ -67,11 +67,19 @@ CODE    SEGMENT PUBLIC 'CODE'
 		EXTRN 	InitMotors:NEAR             ;Initialize motor shared variables.
         EXTRN   GetMotorSpeed:NEAR          ;Get motor speed.
         EXTRN   GetMotorDirection:NEAR      ;Get motor direction.
+		EXTRN 	GetLaser:NEAR				;Get laser status.
 		EXTRN   DoNOP:NEAR                  ;Does nothing.
 
 ; Constant strings and tables
 ParserError LABEL   BYTE
-DB      'ParseErr', 0       ; Motor parser error string.
+DB      'ParseErr', ASCII_NULL  ; Motor parser error string.
+
+LaserOnString LABEL   BYTE
+DB      'LaserOn', ASCII_NULL	; Laser on status message.
+
+LaserOffString LABEL   BYTE
+DB      'LaserOff', ASCII_NULL	; Laser off status message.
+
 
 ; MotorEventActionTable 
 ; Description:      This table contains the function that should be performed
@@ -348,6 +356,26 @@ ConvertDirection:
 MtrSendDirection:
         DEC     SI
         CALL    SerialSendString
+		
+MtrCheckLaser:
+		MOV		BX, CS
+		MOV		ES, BX
+		
+		CALL	GetLaser
+		TEST	AX, AX
+		JZ		SendLaserOffStatus
+		;JNZ	SendLaserOnStatus
+		
+SendLaserOnStatus:
+		MOV		SI, OFFSET(LaserOnStr)
+		JMP		MtrSendLaserStatus
+		
+SendLaserOffStatus:
+		MOV		SI, OFFSET(LaserOffStr)
+		JMP		MtrSendLaserStatus
+		
+MtrSendLaserStatus:
+		CALL	SerialSendString
 
 EndMtrSerialDataEvent:   
         RET     

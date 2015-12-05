@@ -10,14 +10,19 @@
 ; Description:      This file contains the main loop for the RoboTrike remote
 ;                   unit. This loop processes keypad and serial events on the
 ;                   remote unit, and displays various messages to the user
-;                   including what
+;                   including what command is being sent to the motor unit.
 ;
 ; Input:            Keypad  - keypresses are debounced and converted to events
-;                             that are processed by the main loop.
+;                             that are processed by the main loop. If a key is
+;							  held down, the keypress will register as an auto
+;							  repeat, and begin faster auto repeat after 5 sec. 
 ; Output:           Display - status and error strings appear on the display
 ;                             as buttons are pressed and serial events are
-;                             processed.
-;			 		Serial  - RoboTrike command strings are sent to the 
+;                             processed. Additionally, a message is displayed
+;						      for each command that is sent to the remote unit.
+;			 		Serial  - RoboTrike command strings are sent to the serial 
+;							  in the RoboTrike command format, which is described
+;							  in detail in the RoboTrike functional specification. 
 ;
 ; User Interface:   The user can press buttons on the keypad to read status/error 
 ;                   buffers, and send commands to the motor unit. Each keypress
@@ -34,6 +39,7 @@
 ; unused, but new button functions could be easily added. Buttons 4-15 are
 ; used and their functions are described below:
 ;
+; Button  3 -
 ; Button  4 - sends the max speed command to go full speed in the current direction.
 ; Button  5 - displays the speed status of the motor (last value received from the
 ;             motor unit via serial).
@@ -83,7 +89,8 @@
 ; Revision History:
 ;    12/3/15  David Qu	               initial revision
 ;    12/4/15  David Qu                 fixed bugs, minor errors
-;
+;	 12/5/15  David Qu				   fixed max speed, added comments.
+
 ; local include files
 $INCLUDE(general.inc)  ; General constants.
 $INCLUDE(string.inc)   ; String buffer constants.
@@ -120,7 +127,11 @@ CODE    SEGMENT PUBLIC 'CODE'
                                             ;occurred in the system.
         EXTRN   DoNOP:NEAR                  ;Does nothing.
 
-; Constant strings and tables       
+; Constant strings and tables 
+ResetSystemMessage		LABEL	BYTE ; Message to send to user about resetting the
+								     ; remote system.
+DB		'SysReset', ASCII_NULL
+      
 MaxSpeedMessage		LABEL	BYTE ; Message to send to user about setting max speed.
 DB		'MAXSPEED', ASCII_NULL
 
@@ -439,11 +450,13 @@ CheckForCriticalError:
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
-; Shared Variables:  Writes to speed_buffer - buffer for speed status strings to
+; Shared Variables:  Writes to       index  - start index of buffer to write to
+;						 	   speed_buffer - buffer for speed status strings to
 ;                                             display
-;                                    index  - start index of buffer to write to
+;                                    
 ;                          direction_buffer - buffer for direction status strings 
 ;                                             to display
+;							   laser_buffer - buffer for laser status strings
 ;                              error_buffer - buffer for error status strings to
 ;                                             display
 ;                                eventQueue - queue of events.
@@ -470,11 +483,15 @@ InitRemoteMain      PROC     NEAR
         CALL    ClrIRQVectors           ;clear (initialize) interrupt vector table
 
         CALL    InitEvents              ;initialize event queue.
-        MOV     state, SPEED_STATE      ;start at SPEED_STATE in remote parser.
-        MOV     index, 1                ;start with index of 1 because index 0
-										;is reserved.
+        MOV     state, ERROR_STATE      ;start at ERROR_STATE in remote parser.
+        MOV     index, 0                ;start with index of 0 to record any
+									    ;serial characters initially in the
+										;error buffer.
         MOV     speed_buffer, 'S'       ;start with an 'S' in speed buffer,
-        MOV     direction_buffer, 'D'   ;and a 'D' in the direction buffer.
+        MOV     direction_buffer, 'D'   ;a 'D' in the direction buffer,
+		MOV		laser_buffer, 'L'		;and a 'L' in the laser buffer.
+										;Since the error buffer holds different
+										;statuses it is not initialized.
         
         %INSTALL_HANDLER(INT_14, INT_14_SEGMENT, HandleSerial) ;install the serial 
                                         ; event handler ALWAYS install handlers 
@@ -555,7 +572,7 @@ DoSerialErrorEvent  ENDP
 ; Description:       Handles a remote serial data event by updating the current
 ;                    state if appropriate, and adding the received character to 
 ;                    a buffer that can be displayed at the user's input.
-; Operation:         Checks for a 'S', 'D', 'M', or 'P' which are reserved to 
+; Operation:         Checks for a 'S', 'D', 'L', 'M', or 'P' which are reserved to 
 ;                    signal which state to go to. On any other character, writes 
 ;                    the character to the appropriate buffer.
 ;
@@ -596,10 +613,13 @@ DoSerialDataEvent   PROC     NEAR
         CMP     AL, 'D'                     ; The 'D' character signals that
         JE      DisplayDirectionCase        ; a direction status is being sent.
         
+		CMP		AL, 'L'						; The 'L' character signals that
+		JE		DisplayLaserCase			; a laser status is being sent.
+		
         CMP     AL, 'M'                     ; The 'M' character signals that
         JE      DisplayMotorSerialErrorCase ; a motor serial error is being
                                             ; sent.
-        
+		
         CMP     AL, 'P'                     ; The 'P' character signals that
         JE      DisplayMotorParserErrorCase ; a motor parser error is being sent.
         JNE     SerialDataDefaultCase       ; By default write to a buffer
@@ -612,6 +632,11 @@ DisplaySpeedCase:
 
 DisplayDirectionCase:
         MOV     state, DIRECTION_STATE      ; Read 'D', so go to DIRECTION_STATE.
+        JMP     ResetIndex                  ; Then reset index to prepare for
+                                            ; new writes.
+											
+DisplayLaserCase:
+        MOV     state, LASER_STATE          ; Read 'L', so go to LASER_STATE.
         JMP     ResetIndex                  ; Then reset index to prepare for
                                             ; new writes.
 
@@ -882,7 +907,7 @@ DisplayErrorBuffer  ENDP
 
 ; SendMaxSpeed()
 ; 
-; Description:       Sends the max speed command, which the null terminated 
+; Description:       Sends the max speed command, which is a null terminated 
 ;				     RoboTrike command string located at the label MaxSpeedCommand.
 ;                    Also displays a message indicating max speed was set.
 ; Operation:         Sets ES to CS because we are accessing constant strings.
@@ -926,6 +951,53 @@ SendMaxSpeed  PROC     NEAR
 
 SendMaxSpeed  ENDP
 
+
+; SystemReset()
+; 
+; Description:       Resets the system at the request of the user.
+; Operation:         Turns off interrupts, resets the system, writes the status
+;				     message notifying the user, and then turns interrupts back
+;					 on.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  None.
+; Global Variables:  None.
+;
+; Input:             Key presses generate keypress events through the keypad
+;                    event handler which debounces on a timer repeat.
+;                    
+; Output:            Displays a string message indicating that the RoboTrike
+;					 remote system was reset.
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   constant strings - null terminated character arrays.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: flags, BX, ES, SI.
+; Special notes:     None.
+SystemReset  	PROC     NEAR
+        
+		CLI		; Turn off interrupts
+		CALL	InitRemoteMain
+		
+		MOV     BX, CS  ; The command and message are in the code segment,
+        MOV     ES, BX  ; so we must set ES = CS since Display uses ES:SI.
+        
+        MOV     SI, OFFSET(ResetSystemMessage) ; Load the address of the message 
+        CALL    Display                 ; in SI and then display it to the user.
+		
+		STI		; Turn back on interrupts.
+		
+        RET     
+
+SystemReset  	ENDP
+
 CODE    ENDS
 
 
@@ -935,6 +1007,7 @@ DATA    SEGMENT PUBLIC  'DATA'
     index            DB  ?   ; current index in the buffer.
     speed_buffer     DB BUFFER_SIZE DUP (?) ; speed status of motor.
     direction_buffer DB BUFFER_SIZE DUP (?) ; direction status of motor.
+	laser_buffer     DB BUFFER_SIZE DUP (?) ; laser status of motor unit.
     error_buffer	 DB	BUFFER_SIZE	DUP (?) ; buffer of last motor error.
 DATA    ENDS
 

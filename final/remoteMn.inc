@@ -12,14 +12,15 @@
 ;
 ; Revision History:
 ;	 12/3/15  David Qu			initial revision
-
-; Special keys 
-DISPLAY_SPEED_KEY       EQU     1DH     ; Keycode for display speed key
-DISPLAY_DIRECTION_KEY   EQU     1BH     ; Keycode for display direction key
-DISPLAY_ERROR_KEY       EQU     17H     ; Keycode for display error key
+;    12/5/15  David Qu			removed unneeded constants.
 
 ; Remote main states
-SPEED_STATE             EQU     0       ; Reading speed.
-DIRECTION_STATE         EQU     1       ; Reading direction.
-ERROR_STATE             EQU     2       ; Reading error.
-START_STATE             EQU     3       ; Initial state.
+; By default, the state is ERROR_STATE, but is determined as characters
+; are sent through serial. Note that these constants MUST correspond to the
+; order of the display string buffers in the remoteMn.asm DATA segment because
+; they are used to determine which buffer to write to.
+SPEED_STATE             EQU     0       ; Reading speed status.
+DIRECTION_STATE         EQU     1       ; Reading direction status.
+LASER_STATE				EQU 	2		; Reading laser status.
+ERROR_STATE             EQU     3       ; Reading error.
+										
