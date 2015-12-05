@@ -15,4 +15,4 @@ link86 remoteMn.obj, init.obj, keypad.obj, timer.obj, display.obj, events.obj to
 link86 converts.obj, segtab14.obj, serial.obj, initSeri.obj, queue.obj, general.obj to link2.lnk 
 link86 link1.lnk, link2.lnk to remoteMn.lnk
 loc86 remoteMn.lnk to remoteMn.exe NOIC AD(SM(CODE(4000H),DATA(400H),STACK(7000H)))
-pcdebug
+pcdebug -p COM4
