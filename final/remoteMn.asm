@@ -6,14 +6,52 @@
 ;                                  EE/CS  51                                 ;
 ;                                  David Qu                                  ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; Description:      This
 ;
-; Input:            None.
-; Output:           None.
+; Description:      This file contains the main loop for the RoboTrike remote
+;                   unit. This loop processes keypad and serial events on the
+;                   remote unit, and displays various messages to the user
+;                   including what
 ;
-; User Interface:   The user can press buttons on the
-; Error Handling:   None.
+; Input:            Keypad  - keypresses are debounced and converted to events
+;                             that are processed by the main loop.
+; Output:           Display - status and error strings appear on the display
+;                             as buttons are pressed and serial events are
+;                             processed.
+;
+; User Interface:   The user can press buttons on the keypad to read status/error 
+;                   buffers, and send commands to the motor unit. Each keypress
+;                   is debounced and will auto-repeat if held down.
+; 
+; Keypad Layout:
+; 0  1  2  3
+; 4  5  6  7
+; 8  9  10 11
+; 12 13 14 15
+; 
+; The keypad is a 4x4 grid of keys as depicted above. 
+; Currently, buttons 0-3 are unused, and multiple button combinations are
+; unused, but new button functions could be easily added. Buttons 4-15 are
+; used and their functions are described below:
+;
+; Button  4 - sends the max speed command to go full speed in the current direction.
+; Button  5 - displays the speed status of the motor (last value received from the
+;             motor unit via serial).
+; Button  6 - displays the direction status of the motor (last value received
+;             from the motor unit via serial).
+; Button  7 - displays the last motor error received.
+; Button  8 - fires the laser
+; Button  9 - slows down 
+; Button 10 - increases speed by 1000 (max is 65534).
+; Button 11 - stops the motor
+; Button 12 - turns off the laser
+; Button 13 - increases the angle by 30 degrees (counterclockwise)
+; Button 14 - turns the RoboTrike around (still goes at the same speed)
+; Button 15 - decreases the angle by 30 degrees (clockwise)
+; 
+;       
+; Error Handling:   There is an error buffer which contains the most recent
+;                   error that has occurred. It can be accessed by a button in
+;                   the keypad. See User interface for the keypad layout.
 ;
 ; Algorithms:       None.
 ; Data Structures:  None.
@@ -29,7 +67,10 @@
 ; DisplayStatus      - display a status value based on current state.
 ; DoSerialErrorEvent - handle remote serial error.
 ; DoSerialDataEvent  - handle remote serial data.
-; DoKeypadEvent      - Handle keypad events by calling the keypad table.
+; DoKeypadEvent      - handle keypad events by calling the keypad table.
+; DisplaySpeedBuffer - display the speed buffer to the user.
+; DisplayDirectionBuffer - display the direction buffer to the user.
+; DisplayErrorBuffer - display the error buffer to the user.
 ;
 ; Tables:
 ; RemoteEventActionTable - actions for each remote event in a switch table.
@@ -38,6 +79,7 @@
 ;
 ; Revision History:
 ;    12/3/15  David Qu	               initial revision
+;    12/4/15  David Qu                 fixed bugs, minor errors
 ;
 ; local include files
 $INCLUDE(general.inc)  ; General constants.
@@ -76,21 +118,31 @@ CODE    SEGMENT PUBLIC 'CODE'
         EXTRN   DoNOP:NEAR                  ;Does nothing.
         
 ; Read-only tables
-ParserError LABEL   BYTE
-        DB      'ParseErr', 0       ; Motor parser error string.
 
+; RemoteEventActionTable 
+; Description:      This table contains the function that should be performed
+;                   when a specific event type is processed.
+;
+; Author:           David Qu
+; Last Modified:    Dec. 4, 2015 
 RemoteEventActionTable LABEL   WORD ; Table of functions for
         DW      DoKeypadEvent       ; the switch statement in 
         DW      DoSerialErrorEvent  ; the remote main loop. These functions handle
         DW      DoSerialDataEvent   ; various event types.     
         DW      DoNOP
-        
-BufferWriteTable    LABEL   WORD ; Table of functions for
-        DW      WriteSpeedBuffer      ; the switch statement in 
-        DW      WriteDirectionBuffer  ; the remote main loop. These functions handle
-        DW      WriteErrorBuffer      ; various event types.     
-        DW      DoNOP
 
+        
+; KeypadActionTable 
+; Description:      This table contains the function that should be performed
+;                   when a specific button is pressed.
+; Keypad layout
+; 0  1  2  3
+; 4  5  6  7
+; 8  9  10 11
+; 12 13 14 15
+;
+; Author:           David Qu
+; Last Modified:    Dec. 4, 2015 
 KeyActionTable      LABEL   WORD
         ; Row 0 of keypad
         DW      DoNOP       ; 00H 
@@ -110,6 +162,7 @@ KeyActionTable      LABEL   WORD
         DW      DoNOP       ; 0EH  Button 0
         DW      DoNOP       ; 0FH
         
+        ; Row 1 of keypad
         DW      DoNOP       ; 10H 
         DW      DoNOP       ; 11H 
         DW      DoNOP       ; 12H
@@ -127,6 +180,7 @@ KeyActionTable      LABEL   WORD
         DW      SendKeypadCommand ; 1EH  Button 4 (Full speed ahead)
         DW      DoNOP       ; 1FH
         
+        ; Row 2 of keypad
         DW      DoNOP       ; 20H 
         DW      DoNOP       ; 21H 
         DW      DoNOP       ; 22H
@@ -144,6 +198,7 @@ KeyActionTable      LABEL   WORD
         DW      SendKeypadCommand ; 2EH  Button 8  (fire laser command)
         DW      DoNOP       ; 2FH
         
+        ; Row 3 of keypad
         DW      DoNOP       ; 30H 
         DW      DoNOP       ; 31H 
         DW      DoNOP       ; 32H
@@ -252,6 +307,7 @@ SERIAL_ERROR_STR_LENGTH	    EQU	    %length - 1	; the length of the table string
         %TABENT('      ')   ; 0EH  Button 0
         %TABENT('      ')   ; 0FH
         
+        ; Row 1 of keypad
         %TABENT('      ')   ; 10H 
         %TABENT('      ')   ; 11H 
         %TABENT('      ')   ; 12H
@@ -269,6 +325,7 @@ SERIAL_ERROR_STR_LENGTH	    EQU	    %length - 1	; the length of the table string
         %TABENT('S65534')   ; 1EH  Button 4 (Full speed ahead)
         %TABENT('      ')   ; 1FH
         
+        ; Row 2 of keypad
         %TABENT('      ')   ; 20H 
         %TABENT('      ')   ; 21H 
         %TABENT('      ')   ; 22H
@@ -286,6 +343,7 @@ SERIAL_ERROR_STR_LENGTH	    EQU	    %length - 1	; the length of the table string
         %TABENT('F     ')   ; 2EH  Button 8  (fire laser command)
         %TABENT('      ')   ; 2FH
         
+        ; Row 3 of keypad
         %TABENT('      ')   ; 30H 
         %TABENT('      ')   ; 31H 
         %TABENT('      ')   ; 32H
@@ -698,58 +756,11 @@ EndSendKeypadCommand:
 SendKeypadCommand   ENDP
 
 
-; DisplayBuffer()
+; DisplaySpeedBuffer()
 ; 
-; Description:       Displays a buffer based on the state shared variable.
-; Operation:         
-;
-; Arguments:         None.
-; Return Value:      None.
-;
-; Local Variables:   None.
-; Shared Variables:  None.
-; Global Variables:  None.
-;
-; Input:             Key presses generate keypress events through the keypad
-;                    event handler which debounces on a timer repeat.
-; Output:            Displays a string from one of the buffers if one of the 
-;                    DISPLAY keys is pressed. Otherwise, sends a message through
-;                    the serial and displays the sent message.
-;
-; Error Handling:    None.
-;
-; Algorithms:        None.
-; Data Structures:   KeypadCommandTable fixed length string table.
-;
-; Known Bugs:        None.
-; Limitations:       None.
-;
-; Registers Changed: flags.
-; Special notes:     None.
-DisplayBuffer   PROC     NEAR
-                PUBLIC   DisplayBuffer
-        
-        MOV     BX, DS
-        MOV     ES, BX
-        
-        MOV     SI, OFFSET(speed_buffer)
-        XOR     BH, BH
-        MOV     BL, state
-        IMUL    BX, BX, BUFFER_SIZE
-        ADD     SI, BX
-        
-        CALL    Display
-        
-        RET     
-
-DisplayBuffer   ENDP
-
-
-
-; DisplayBuffer()
-; 
-; Description:       Displays the speed buffer.
-; Operation:         
+; Description:       Displays the speed buffer by loading ES:SI with the address
+;                    of the speed buffer, and calling display. 
+; Operation:         Calls display with ES = DS, and SI = OFFSET(speed_buffer).
 ;
 ; Arguments:         None.
 ; Return Value:      None.
@@ -760,27 +771,24 @@ DisplayBuffer   ENDP
 ;
 ; Input:             Key presses generate keypress events through the keypad
 ;                    event handler which debounces on a timer repeat.
-; Output:            Displays a string from one of the buffers if one of the 
-;                    DISPLAY keys is pressed. Otherwise, sends a message through
-;                    the serial and displays the sent message.
-;
+; Output:            Displays a string from the speed_buffer.
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
-; Data Structures:   speed_buffer string buffer of speed status.
+; Data Structures:   speed_buffer - string buffer of speed status.
 ;
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, BX, ES, SI.
 ; Special notes:     None.
 DisplaySpeedBuffer   PROC     NEAR
         
-        MOV     BX, DS
-        MOV     ES, BX
+        MOV     BX, DS  ; The speed buffer is in the data segment,
+        MOV     ES, BX  ; so we must set ES = DS since Display uses ES:SI
         
-        MOV     SI, OFFSET(speed_buffer)
-        CALL    Display
+        MOV     SI, OFFSET(speed_buffer) ; Load the address of the speed buffer
+        CALL    Display                  ; in SI and then display it to the user.
         
         RET     
 
@@ -789,22 +797,20 @@ DisplaySpeedBuffer   ENDP
 
 ; DisplayDirectionBuffer()
 ; 
-; Description:       Displays the direction buffer.
-; Operation:         
+; Description:       Displays the direction buffer by loading ES:SI with the address
+;                    of the direction buffer, and calling display. 
+; Operation:         Calls display with ES = DS, and SI = OFFSET(direction_buffer).
 ;
 ; Arguments:         None.
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
-; Shared Variables:  Reads from the speed_buffer - buffer to store speed status.
+; Shared Variables:  Reads from the direction_buffer - buffer to store direction status.
 ; Global Variables:  None.
 ;
 ; Input:             Key presses generate keypress events through the keypad
 ;                    event handler which debounces on a timer repeat.
-; Output:            Displays a string from one of the buffers if one of the 
-;                    DISPLAY keys is pressed. Otherwise, sends a message through
-;                    the serial and displays the sent message.
-;
+; Output:            Displays a string from the direction_buffer.
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
@@ -813,15 +819,16 @@ DisplaySpeedBuffer   ENDP
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, BX, ES, SI.
 ; Special notes:     None.
 DisplayDirectionBuffer   PROC     NEAR
         
-        MOV     BX, DS
-        MOV     ES, BX
+        MOV     BX, DS  ; The direction buffer is in the data segment,
+        MOV     ES, BX  ; so we must set ES = DS since Display uses ES:SI.
         
-        MOV     SI, OFFSET(direction_buffer)
-        CALL    Display
+        MOV     SI, OFFSET(direction_buffer) ; Load the address of the direction
+        CALL    Display                      ; buffer in SI and then display it 
+                                             ; to the user.
         
         RET     
 
@@ -830,39 +837,37 @@ DisplayDirectionBuffer   ENDP
 
 ; DisplayErrorBuffer()
 ; 
-; Description:       Displays the direction buffer.
-; Operation:         
+; Description:       Displays the error buffer by loading ES:SI with the address
+;                    of the error buffer, and calling display. 
+; Operation:         Calls display with ES = DS, and SI = OFFSET(error_buffer).
 ;
 ; Arguments:         None.
 ; Return Value:      None.
 ;
 ; Local Variables:   None.
-; Shared Variables:  Reads from the speed_buffer - buffer to store speed status.
+; Shared Variables:  Reads from the error_buffer - buffer to store error status.
 ; Global Variables:  None.
 ;
 ; Input:             Key presses generate keypress events through the keypad
 ;                    event handler which debounces on a timer repeat.
-; Output:            Displays a string from one of the buffers if one of the 
-;                    DISPLAY keys is pressed. Otherwise, sends a message through
-;                    the serial and displays the sent message.
-;
+; Output:            Displays a string from the error_buffer.
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
-; Data Structures:   direction_buffer - string buffer of direction status.
+; Data Structures:   error_buffer - string buffer of direction status.
 ;
 ; Known Bugs:        None.
 ; Limitations:       None.
 ;
-; Registers Changed: flags.
+; Registers Changed: flags, BX, ES, SI.
 ; Special notes:     None.
 DisplayErrorBuffer  PROC     NEAR
         
-        MOV     BX, DS
-        MOV     ES, BX
+        MOV     BX, DS  ; The error buffer is in the data segment,
+        MOV     ES, BX  ; so we must set ES = DS since Display uses ES:SI.
         
-        MOV     SI, OFFSET(error_buffer)
-        CALL    Display
+        MOV     SI, OFFSET(error_buffer) ; Load the address of the error buffer
+        CALL    Display                  ; in SI and then display it to the user.
         
         RET     
 
