@@ -745,7 +745,11 @@ SerialDataDefaultCase:
         INC     index                       ; Update index shared variable to
                                             ; indicate next available buffer
                                             ; location.
-        ;JMP    EndSerialDataEvent
+        CMP     index, BUFFER_SIZE          ; Prevent buffer overflow.
+        JE      ResetIndex                  ; If at the end of the buffer,
+        ;JNE    EndSerialDataEvent          ; reset the index, so you wrap
+                                            ; around instead of writing to
+                                            ; nonsense.
 
 EndSerialDataEvent:
         
