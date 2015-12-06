@@ -28,6 +28,7 @@
 ;		10/30/15  David Qu	    fixed display_buffer accesses.
 ;								added comments.
 ;		10/31/15  David Qu		refactored code.
+;       12/5/15   David Qu      added IncreaseOnTime / IncreaseOffTime
 
 ; local include files
 $INCLUDE(display.inc)
