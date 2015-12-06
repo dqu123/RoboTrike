@@ -89,7 +89,10 @@ DB      'LaserOff', ASCII_NULL	; Laser off status message.
 
 ; MotorEventActionTable 
 ; Description:      This table contains the function that should be performed
-;                   when a specific event type is processed.
+;                   when a specific event type is processed. Note that this 
+;					table MUST match the values of the KEYPRESS_EVENT,
+;					SERIAL_ERROR_EVENT, and SERIAL_DATA_EVENT constants 
+;				    defined in events.inc.
 ;
 ; Author:           David Qu
 ; Last Modified:    Dec. 4, 2015 
