@@ -742,12 +742,18 @@ SerialDataDefaultCase:
         ADD     BX, CX                      ; Perform word addition.
         INC     index                       ; Update index shared variable to
                                             ; indicate next available buffer
-                                            ; location.
+                                            ; location. This is also the
+                                            ; address where the NULL gets
+                                            ; written.
         CMP     index, BUFFER_SIZE          ; Prevent buffer overflow.
+                                            ; If index == BUFFER_SIZE,
+                                            ; then we would write the NULL
+                                            ; past the allocated space for the
+                                            ; buffer (because of 0 indexing).
         JGE     ResetIndex                  ; If at the end of the buffer,
         ;JL     WriteSerialDataToBuffer     ; reset the index, so you wrap
-                                            ; around instead of writing to
-                                            ; nonsense.
+                                            ; around instead of writing past
+                                            ; the buffer bounds.
 											
 WriteSerialDataToBuffer:
         MOV     [SI + BX], AL               ; Write character to buffer.
