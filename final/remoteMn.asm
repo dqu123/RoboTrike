@@ -740,16 +740,19 @@ SerialDataDefaultCase:
         MOV     CL, index                   ; The index gives the character
         XOR     CH, CH                      ; offset in the buffer.
         ADD     BX, CX                      ; Perform word addition.
-        MOV     [SI + BX], AL               ; Write character to buffer.
-        MOV     BYTE PTR [SI + BX + 1], ASCII_NULL ; NULL terminate buffer.
         INC     index                       ; Update index shared variable to
                                             ; indicate next available buffer
                                             ; location.
         CMP     index, BUFFER_SIZE          ; Prevent buffer overflow.
-        JE      ResetIndex                  ; If at the end of the buffer,
-        ;JNE    EndSerialDataEvent          ; reset the index, so you wrap
+        JGE     ResetIndex                  ; If at the end of the buffer,
+        ;JL     WriteSerialDataToBuffer     ; reset the index, so you wrap
                                             ; around instead of writing to
                                             ; nonsense.
+											
+WriteSerialDataToBuffer:
+        MOV     [SI + BX], AL               ; Write character to buffer.
+        MOV     BYTE PTR [SI + BX + 1], ASCII_NULL ; NULL terminate buffer.
+        
 
 EndSerialDataEvent:
         
