@@ -10,16 +10,21 @@
 ; Description:      Main loop for the motor unit. First initializes the chip 
 ;					select, event queue, serial, motor, parser and interrupts. 
 ;					Then processes events in the event queue using a switch 
-;					table. Events are added by the interrupt handlers.
+;					table. Events are added by the interrupt handlers and include
+; 					serial data and serial error events.
 ;
-; Input:            Serial data from the remote unit.
+; Input:            Serial data from the remote unit. This data is in the
+;					RoboTrike command format, which is described in the 
+;					RoboTrike System Functional Specification.
 ; Output:           motor - the motor will rotate according to shared variables 
 ;							in the motor module.
 ;					serial - the motor unit will send back status messages and
-;						     error messages via serial. 
+;						     error messages via serial to the remote system.
+;							  
 ;
 ; User Interface:   While the user cannot directly interface with the motor unit
-;					board, the motor receives command messages via serial.
+;					board, the motor receives command messages via serial in the
+;					RoboTrike command format.
 ; Error Handling:   If an error occurs, an appropriate message is sent to the
 ;					remote unit to be displayed to the user.
 ;
@@ -32,6 +37,7 @@
 ; Revision History:
 ;    12/3/15  David Qu	               initial revision
 ;    12/4/15  David Qu				   added comments
+;    12/5/15  David Qu				   added comments
 ;
 ; local include files
 $INCLUDE(general.inc)
@@ -287,14 +293,17 @@ DoSerialErrorEvent  PROC     NEAR
 
 DoSerialErrorEvent  ENDP
 
+
 ; MtrSerialDataEvent(char)
 ; 
 ; Description:       Handles a motor serial data event by calling ParseSerialChar
 ;                    and sends out an error message to the remote unit if there
-;                    is a parser error.
+;                    is a parser error. Sends the new status of the RoboTrike.
 ; Operation:         Calls ParseSerialChar to parse the passed char. Then checks 
 ;                    the return status to see if PARSER_ERROR. If it is, then 
-;                    sends the ParserError string through the serial.
+;                    sends the ParserError string through the serial. Otherwise
+;					 sends status strings of the RoboTrike's speed, direction
+;					 and laser state.
 ;
 ; Arguments:         char (AL) - character received from serial.
 ; Return Value:      None.
@@ -320,67 +329,87 @@ DoSerialErrorEvent  ENDP
 ; Special notes:     None.   
 MtrSerialDataEvent  PROC     NEAR
 
-        CALL    ParseSerialChar
-        CMP     AX, PARSER_ERROR
-        JNE     MtrSendStatus
-        ;JE     MtrSendParserError
+        CALL    ParseSerialChar		; Parse the serial data using the parser.
+        CMP     AX, PARSER_ERROR	; Check if there was a parser error.
+		;JE     MtrSendParserError  ; If there was, send a parser error to
+									; the remote unit.
+        JNE     MtrSendStatus	    ; Otherwise, send status strings to the
+									; motor.
+       
         
 MtrSendParserError:       
-        MOV     SI, OFFSET(ParserError)
-        MOV     BX, CS      ; Set ES to CS since the
-        MOV     ES, BX      ; error string is in code space.
-        CALL    SerialSendString ; Display the error string.
-        JMP     EndMtrSerialDataEvent
+        MOV     SI, OFFSET(ParserError)	; Load address of the parser error
+										; string in SI for SerialSendString.
+        MOV     BX, CS      			; Set ES to CS since the
+        MOV     ES, BX      			; error string is in code space.
+        CALL    SerialSendString 		; Display the error string.
+        JMP     EndMtrSerialDataEvent	; No need to send motor status
+										; since it hasn't changed if there was
+										; a parser error.
         
 MtrSendStatus:     
-        MOV     BX, DS
-        MOV     ES, BX
-        MOV     SI, OFFSET(str_buffer) + 1
+        MOV     BX, DS						; Set ES to DS since we build status
+        MOV     ES, BX						; strings using the str_buffer.
+		
+		MOV     str_buffer, 'S'				; Reserve the first character in the 
+        MOV     SI, OFFSET(str_buffer) + 1	; buffer for the special 'S' status 
+											; character. SI now points to
+											; where we need to add the digits
+											; of the speed status.
                 
-        CALL    GetMotorSpeed
-        MOV     str_buffer, 'S'
-        
 ConvertSpeed:
-        CALL    UnsignedDec2String
+        CALL    GetMotorSpeed		; Get the speed status  
+        CALL    UnsignedDec2String  ; and convert it to an unsigned string
+									; in the string buffer.
 MtrSendSpeed:
-        DEC     SI
-        CALL    SerialSendString
+        DEC     SI					; We want to send the whole status string,
+									; so we decrement SI to point to the 'S'
+									; special character.
+        CALL    SerialSendString	; Send the speed to the remote unit.
         
-        CALL    GetMotorDirection
-        MOV     str_buffer, 'D'
         
 ConvertDirection:
-        INC     SI
-        CALL    Dec2String
+		MOV     str_buffer, 'D'		; Reserve the first character in the
+									; buffer for the special 'D' status character.
+		CALL    GetMotorDirection	; Get the current speed
+        INC     SI					; Don't want to override the 'D' we just
+									; wrote, so increment SI to write a string
+									; in the format 'D{number}'.
+        CALL    Dec2String		    ; Convert the direction to a signed string
+									; representation in the string buffer.
         
 MtrSendDirection:
-        DEC     SI
-        CALL    SerialSendString
+        DEC     SI					; We want to send the whole status string,
+									; so we decrement SI to point to the 'D'
+									; special character.
+        CALL    SerialSendString	; Send the direction to the remote unit.
 		
 MtrCheckLaser:
-		MOV		BX, CS
-		MOV		ES, BX
+		MOV		BX, CS				; Set ES to CS since the laser status
+		MOV		ES, BX			    ; strings are in the code segment.
 		
-		CALL	GetLaser
-		TEST	AX, AX
-		JZ		SendLaserOffStatus
-		;JNZ	SendLaserOnStatus
+		CALL	GetLaser			; Get the laser status, which is a boolean.
+		TEST	AX, AX				; Check if the laser is set, and send the
+		JZ		LaserOffStatus	    ; appropriate status message.
+		;JNZ	LaserOnStatus
 		
-SendLaserOnStatus:
-		MOV		SI, OFFSET(LaserOnString)
-		JMP		MtrSendLaserStatus
+LaserOnStatus:
+		MOV		SI, OFFSET(LaserOnString) ; Load the address of the laser on
+		JMP		MtrSendLaserStatus	 	  ; status string in SI. 
 		
-SendLaserOffStatus:
-		MOV		SI, OFFSET(LaserOffString)
-		JMP		MtrSendLaserStatus
+LaserOffStatus:
+		MOV		SI, OFFSET(LaserOffString) ; Load the address of the laser off
+		JMP		MtrSendLaserStatus		   ; status string in SI.
 		
 MtrSendLaserStatus:
-		CALL	SerialSendString
+		CALL	SerialSendString		   ; Send laser status to the remote
+										   ; unit.
 
 EndMtrSerialDataEvent:   
         RET     
 
 MtrSerialDataEvent  ENDP        
+
 
 CODE    ENDS
 

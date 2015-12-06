@@ -18,6 +18,7 @@
 ; EnqueueEvent()       - Attempt to enqueue an event to the event queue.
 ; DequeueEvent()       - Dequeue an event from the event queue if it is not empty.
 ; GetCriticalError()   - Gets the current critical error.
+; SetCriticalError()   - Signals a critical error.
 ;
 ; Local functions:
 ; None.
@@ -28,6 +29,7 @@
 ;
 ; Revision History:
 ; 		12/3/15  David Qu		initial revision.
+;       12/5/15  David Qu		added SetCriticalError.
 
 
 ;local include files. 
@@ -233,11 +235,46 @@ DequeueEvent    ENDP
 GetCriticalError    PROC     NEAR
                     PUBLIC   GetCriticalError
 
-        MOV     AL, criticalError
+        MOV     AL, criticalError	; Read the critical error status.
        
         RET     
 
 GetCriticalError    ENDP
+
+
+; SetCriticalError()
+; 
+; Description:       Writes to the criticalError to signal a critical error.
+; Operation:         Sets criticalError = TRUE.
+;
+; Arguments:         None.
+; Return Value:      None.
+;
+; Local Variables:   None.
+; Shared Variables:  Writes to criticalError - whether a critical error has occurred.
+; Global Variables:  None.
+;
+; Input:             None.
+; Output:            None.
+;
+; Error Handling:    None.
+;
+; Algorithms:        None.
+; Data Structures:   None.
+;
+; Known Bugs:        None.
+; Limitations:       None.
+;
+; Registers Changed: None.
+; Special notes:     None.
+SetCriticalError    PROC     NEAR
+                    PUBLIC   SetCriticalError
+
+        MOV     criticalError, TRUE ; Signal a critical error.
+       
+        RET     
+
+SetCriticalError    ENDP
 
 CODE    ENDS
 

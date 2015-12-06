@@ -8,31 +8,51 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; Description:      This file contains the main loop for the RoboTrike remote
-;                   unit. This loop processes keypad and serial events on the
-;                   remote unit, and displays various messages to the user
-;                   including what command is being sent to the motor unit.
+;                   unit. First initializes the chip select, event queue, serial, 
+;					keypad, display, timers and interrupts. Then processes events in 
+;                   the event queue using a switch table. Events are added by
+;                   the interrupt handlers. Keypad and serial events are
+;					processed on the remote unit, and various messages are
+;				    displayed to the user including what command is being sent 
+;					to the motor unit.
 ;
 ; Input:            Keypad  - keypresses are debounced and converted to events
 ;                             that are processed by the main loop. If a key is
 ;							  held down, the keypress will register as an auto
 ;							  repeat, and begin faster auto repeat after 5 sec. 
+;					Serial  - the remote system receives status/error messages 
+;							  from the motor system via serial. The characters
+;							  'S', 'D', 'L', 'M', and 'P' are reserved to signal
+;							  which buffer the remote system should write to.
+;							  An overview of the communication protocol between 
+;							  the motor and remote units is given in the 
+;							  RoboTrike System Functional Specification.
+;							  Specific details about configuring the serial
+;							  chip are found in the serial.asm module. 
+;						      
 ; Output:           Display - status and error strings appear on the display
 ;                             as buttons are pressed and serial events are
 ;                             processed. Additionally, a message is displayed
 ;						      for each command that is sent to the remote unit.
+;							  There are 4 buttons that allow the user to toggle 
+;							  between displaying the strings in the four string
+;							  buffers. Since the display only has 8 14-segment
+;							  LED digits, these status buffers must share the
+;							  same display.
 ;			 		Serial  - RoboTrike command strings are sent to the serial 
 ;							  in the RoboTrike command format, which is described
-;							  in detail in the RoboTrike functional specification. 
+;							  in detail in the RoboTrike System Functional 
+;							  Specification. 
 ;
 ; User Interface:   The user can press buttons on the keypad to read status/error 
 ;                   buffers, and send commands to the motor unit. Each keypress
 ;                   is debounced and will auto-repeat if held down.
 ; 
-; Keypad Layout:
-; 0  1  2  3
-; 4  5  6  7
-; 8  9  10 11
-; 12 13 14 15
+; Keypad Layout:       Mnemonic/Abbreviated form: 
+; 0  1  2  3		   RESET      BLINK_ON_UP  BLINK_OFF_UP    SHOW_ERROR
+; 4  5  6  7           MAX_SPEED  SHOW_SPEED   SHOW_DIRECTION  SHOW_LASER
+; 8  9  10 11          LASER_ON   SLOW_DOWN    SPEED_UP		   STOP
+; 12 13 14 15          LASER_OFF  TURN_LEFT	   REVERSE		   TURN_RIGHT
 ; 
 ; The keypad is a 4x4 grid of keys as depicted above. 
 ; Currently, most multiple button combinations are unused, but new button functions 
@@ -42,7 +62,8 @@
 ;	  Button 1 + 2 - reset blink rate settings.
 ; 
 ; Single button functions: 
-;     Button  0 - reset the system.
+;     Button  0 - send a stop signal to the motor system and reset the
+;				  remote system.
 ;     Button  1 - increase on_time and affect blink rate and brightness*
 ;     Button  2 - increase off_time and affect blink rate and brightness*
 ;     Button  3 - displays the last motor error received.
@@ -52,15 +73,16 @@
 ;				  from the motor unit via serial).
 ;     Button  6 - displays the direction status of the motor (last value received
 ;                 from the motor unit via serial).
-;     Button  7 - displays the laser status.
+;     Button  7 - displays the laser status (last value received from the motor
+;				  via serial).
 ;     Button  8 - fires the laser
-;     Button  9 - slows down 
-;     Button 10 - increases speed by 1000 (max is 65534).
+;     Button  9 - slows down speed by 1000** (max is 65534).
+;     Button 10 - increases speed by 1000** (max is 65534).
 ;     Button 11 - stops the motor
 ;     Button 12 - turns off the laser
-;     Button 13 - increases the angle by 30 degrees (counterclockwise)
-;     Button 14 - turns the RoboTrike around (still goes at the same speed)
-;     Button 15 - decreases the angle by 30 degrees (clockwise)
+;     Button 13 - increases the angle by 30 degrees (counterclockwise).
+;     Button 14 - turns the RoboTrike around (still goes at the same speed).
+;     Button 15 - decreases the angle by 30 degrees (clockwise).
 ; 
 ; *Blink rate and brightness are determined by the on_time and off_time.
 ; The display is displayed for on_time counts and then off_time counts in a
@@ -68,13 +90,23 @@
 ; to roughly equivalent counts. The higher the total count, the more time
 ; between blinks. To lower the brightness, just increase the off_time. The
 ; default blink setting is max brightness and no blinking.
+;
+; **Since the RoboTrike system has no way of detecting speed, the speed 
+; setting simply an integer value from 0 to 65534.
+; 
 ;       
-; Error Handling:   There is an error buffer which contains the most recent
-;                   error that has occurred. It can be accessed by a button in
-;                   the keypad. See User interface for the keypad layout.
+; Error Handling:   The remote unit can detect its serial errors and also receives
+;					motor serial errors and motor parser errors through the
+;					serial. Remote unit serial errors are immediately displayed
+;				    when they occur and are not buffered.
+;					There is an error buffer which contains the most recent
+;                   motor error that has occurred. It can be accessed by a button 
+;					in the keypad. See User interface for the keypad layout.			
 ;
 ; Algorithms:       None.
-; Data Structures:  None.
+; Data Structures:  string buffers - null terminated character arrays that
+;									 contain status strings to display.
+;					eventQueue     - contains events enqueued by event handlers.
 ;
 ; Known Bugs:       None.
 ; Limitations:      None.
@@ -94,6 +126,10 @@
 ; SendMaxSpeed 	     - displays the max speed message, and sends the max string
 ;					   command sequence to the motor unit.
 ;
+; Constant Strings:
+; WelcomeMessage, ResetSystemMessage, MaxSpeedMessage,
+; MaxSpeedCommand, and StopCommand.
+; 
 ; Tables:
 ; RemoteEventActionTable - actions for each remote event in a switch table.
 ; RemoteSerialErrorTable - error messages for remote serial errors.
@@ -142,9 +178,13 @@ CODE    SEGMENT PUBLIC 'CODE'
 		EXTRN	IncreaseOnTime:NEAR			;Increases ontime shared variable.
 		EXTRN	IncreaseOffTime:NEAR		;Increases offtime shared variable.
 		EXTRN 	ResetBlinkRate:NEAR			;Resets to default blink rate.
+		EXTRN	SetCriticalError:NEAR		;Signals a critical error.
 
 ; Constant strings and tables 
-ResetSystemMessage		LABEL	BYTE ; Message to send to user about resetting the
+WelcomeMessage		LABEL	BYTE ; Message to welcome user.
+DB		'WELCOME', ASCII_NULL
+
+ResetSystemMessage	LABEL	BYTE ; Message to send to user about resetting the
 								     ; remote system.
 DB		'SysReset', ASCII_NULL
       
@@ -176,7 +216,10 @@ RemoteEventActionTable LABEL   WORD ; Table of functions for
         
 ; KeypadActionTable 
 ; Description:      This table contains the function that should be performed
-;                   when a specific button is pressed.
+;                   when a specific button is pressed. Note that the 
+;					SendKeypadCommand sends a command string through another
+;					lookup table, the KeypadCommandTable.
+;
 ; Keypad layout
 ; 0  1  2  3
 ; 4  5  6  7
@@ -196,11 +239,11 @@ KeyActionTable      LABEL   WORD
         DW      DoNOP       ; 06H
         DW      DisplayErrorBuffer ; 07H  Button 3 (Displays the error buffer).
         DW      DoNOP       ; 08H 
-        DW      ResetBlinkRate ; 09H  Button 1 + button 2
+        DW      ResetBlinkRate ; 09H  Button 1 + button 2 (Resets blink rate).
         DW      DoNOP       ; 0AH
-        DW      IncreaseOffTime ; 0BH  Button 2
+        DW      IncreaseOffTime ; 0BH  Button 2	(Increase display off time).
         DW      DoNOP       ; 0CH 
-        DW      IncreaseOnTime  ; 0DH  Button 1
+        DW      IncreaseOnTime  ; 0DH  Button 1 (Increase display on time).
         DW      SystemReset ; 0EH  Button 0 (Reset the system).
         DW      DoNOP       ; 0FH
         
@@ -428,8 +471,14 @@ MAIN:
         CALL    InitRemoteMain          ;initialize main variables, display,
                                         ;keypad, and serial, associated timers,
                                         ;and event handlers.
+										
+        MOV     BX, CS  ; The welcome message is in the code segment,
+        MOV     ES, BX  ; so we must set ES = CS since Display uses ES:SI.
         
-        STI                             ;and finally allow interrupts. 
+		MOV		SI, OFFSET(WelcomeMessage) ; Load the address of the welcome
+		CALL	Display           		   ; message and display it.
+		
+        STI                                ; Finally allow interrupts. 
         
 ProcessRemoteMainLoop:
         CALL    DequeueEvent            ; Check for event in the event queue.
@@ -889,7 +938,7 @@ DisplayDirectionBuffer   ENDP
 ; DisplayLaserBuffer()
 ; 
 ; Description:       Displays the laser buffer by loading ES:SI with the address
-;                    of the speed buffer, and calling display. 
+;                    of the laser buffer, and calling display. 
 ; Operation:         Calls display with ES = DS, and SI = OFFSET(laser_buffer).
 ;
 ; Arguments:         None.
@@ -901,7 +950,7 @@ DisplayDirectionBuffer   ENDP
 ;
 ; Input:             Key presses generate keypress events through the keypad
 ;                    event handler which debounces on a timer repeat.
-; Output:            Displays a string from the speed_buffer.
+; Output:            Displays a string from the laser_buffer.
 ; Error Handling:    None.
 ;
 ; Algorithms:        None.
@@ -917,7 +966,7 @@ DisplayLaserBuffer   PROC     NEAR
         MOV     BX, DS  ; The laser buffer is in the data segment,
         MOV     ES, BX  ; so we must set ES = DS since Display uses ES:SI
         
-        MOV     SI, OFFSET(laser_buffer) ; Load the address of the speed buffer
+        MOV     SI, OFFSET(laser_buffer) ; Load the address of the laser buffer
         CALL    Display                  ; in SI and then display it to the user.
         
         RET     
@@ -1044,14 +1093,13 @@ SendMaxSpeed  ENDP
 ;
 ; Registers Changed: flags, BX, ES, SI.
 ; Special notes:     None.
-SystemReset  	PROC     NEAR
-        
+SystemReset  	PROC     NEAR		
 		CLI		; Turn off interrupts
-		CALL	InitRemoteMain
-		
+		CALL	InitRemoteMain	; Reset shared variables.
+		STI		; Turn back on interrupts.
+	    
 		MOV     BX, CS  ; The command and message are in the code segment,
         MOV     ES, BX  ; so we must set ES = CS since Display uses ES:SI.
-        
 SystemSendStop:
 		MOV		SI, OFFSET(StopCommand)     ; Load the address of the command
 		CALL	SerialSendString			; and send it to the motor via serial.
@@ -1059,7 +1107,6 @@ SystemSendStop:
         MOV     SI, OFFSET(ResetSystemMessage) ; Load the address of the message 
         CALL    Display                 ; in SI and then display it to the user.
 		
-		STI		; Turn back on interrupts.
 		
         RET     
 
