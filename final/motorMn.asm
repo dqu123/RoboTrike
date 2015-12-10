@@ -17,9 +17,18 @@
 ;					RoboTrike command format, which is described in the 
 ;					RoboTrike System Functional Specification.
 ; Output:           motor - the motor will rotate according to shared variables 
-;							in the motor module.
+;							in the motor module. The parser will parser commands
+;                           and set the motor speed, direction, and laser shared
+;                           variables appropriately.
 ;					serial - the motor unit will send back status messages and
 ;						     error messages via serial to the remote system.
+;                            The characters 'S', 'D', 'L', 'M', and 'P' are 
+;                            reserved to signal which buffer the remote system 
+;                            should write to. An overview of the communication 
+;                            protocol between the motor and remote units is 
+;                            given in the RoboTrike System Functional 
+;                            Specification. Specific details about configuring 
+;                            the serial chip are found in the serial.asm module. 
 ;							  
 ;
 ; User Interface:   While the user cannot directly interface with the motor unit
@@ -34,10 +43,26 @@
 ; Known Bugs:       None.
 ; Limitations:      None.
 ;
+; Public functions:
+; None.
+;
+; Local functions:
+; InitMotorMain      - initialize motor main shared variables.
+; DoSerialErrorEvent - handle motor serial error.
+; MtrSerialDataEvent - handle motor serial data.
+;
+; Constant Strings:
+; ParserError, LaserOnString, and LaserOffString.
+; 
+; Tables:
+; MtrEventActionTable - actions for each remote event in a switch table.
+; MtrSerialErrorTable - error messages for remote serial errors.
+;
 ; Revision History:
 ;    12/3/15  David Qu	               initial revision
 ;    12/4/15  David Qu				   added comments
 ;    12/5/15  David Qu				   added comments
+;    12/9/15  David Qu                 updated error handling
 ;
 ; local include files
 $INCLUDE(general.inc)
@@ -71,6 +96,7 @@ CODE    SEGMENT PUBLIC 'CODE'
         EXTRN   InstallTimer0Handler:NEAR   ;Install motor handlers on timer 0.
         EXTRN   InitTimer0:NEAR             ;Initialize timer 0.
 		EXTRN 	InitMotors:NEAR             ;Initialize motor shared variables.
+        EXTRN   SetMotorSpeed:NEAR          ;Set motor speed.
         EXTRN   GetMotorSpeed:NEAR          ;Get motor speed.
         EXTRN   GetMotorDirection:NEAR      ;Get motor direction.
 		EXTRN 	GetLaser:NEAR				;Get laser status.
@@ -246,11 +272,13 @@ InitMotorMain      ENDP
 
 ; DoSerialErrorEvent(error)
 ; 
-; Description:       Handles a serial error event by sending the appropriate
+; Description:       Handles a serial error event by stoping the RoboTrike,
+;                    reseting its direction, and sending the appropriate
 ;                    message using a table lookup (after converting from
 ;                    error value table index). Sends an error message to the
-;                    remote unit 
-; Operation:         Checks for each error manually. The possible errors are
+;                    remote unit. 
+; Operation:         Calls SetMotorSpeed to reset the RoboTrike speed and direction. 
+;                    Checks for each error manually. The possible errors are
 ;                    SERIAL_PARITY_ERROR, SERIAL_FRAME_ERROR, SERIAL_OVERRUN_ERROR,
 ;                    and SERIAL_OVERFLOW_ERROR. Calls SerialSendString on the 
 ;                    appropriate string.        
@@ -266,7 +294,8 @@ InitMotorMain      ENDP
 ; Output:            Sends an error message to the remote unit if a parser error
 ;                    occurs.
 ;
-; Error Handling:    Sends an error message to the remote unit if a parser error 
+; Error Handling:    Stops the RoboTrike motors, resets the direction, and
+;                    sends an error message to the remote unit if a parser error 
 ;                    occurs.
 ;
 ; Algorithms:        None.
@@ -280,6 +309,10 @@ InitMotorMain      ENDP
 DoSerialErrorEvent  PROC     NEAR
                     PUBLIC   DoSerialErrorEvent
 
+        MOV     AX, 0         ; Reset motor speed
+        MOV     BX, 0         ; and motor angle if
+        CALL    SetMotorSpeed ; an error occurs.
+        
         MOV     SI, OFFSET(MtrSerialErrorTable)     ; Load table of error strings
         XOR     AH, AH                              ; Extend AL to positive
                                                     ; 16-bit index.
