@@ -239,7 +239,6 @@ CheckForCriticalError:
 ; Registers Changed: flags, AX.
 ; Special notes:     None.
 InitMotorMain      PROC     NEAR
-                   PUBLIC   InitMotorMain
         
         CALL    InitCS                  ;initialize the 80188 chip selects
                                         ;   assumes LCS and UCS already setup
@@ -307,7 +306,6 @@ InitMotorMain      ENDP
 ; Registers Changed: flags.
 ; Special notes:     None.
 DoSerialErrorEvent  PROC     NEAR
-                    PUBLIC   DoSerialErrorEvent
 
         MOV     AX, 0         ; Reset motor speed
         MOV     BX, 0         ; and motor angle if
